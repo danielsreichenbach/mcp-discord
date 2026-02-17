@@ -14,8 +14,8 @@ readme = "README.md"
 license = {file = "LICENSE"}
 
 [project.urls]
-Homepage = "https://github.com/hanweg/mcp-discord"
-Repository = "https://github.com/hanweg/mcp-discord.git"
+Homepage = "https://github.com/danielsreichenbach/mcp-discord"
+Repository = "https://github.com/danielsreichenbach/mcp-discord.git"
 
 [build-system]
 requires = ["hatchling"]
