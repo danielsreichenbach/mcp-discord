@@ -4,12 +4,13 @@ version = "0.1.0"
 description = "Discord integration for Model Context Protocol"
 authors = [
     {name = "Hanweg Altimer", email = "hanwegaltimer@outlook.com"},
+    {name = "Daniel S. Reichenbach", email = "dsreichenbach@googlemail.com"},
 ]
 dependencies = [
     "discord.py>=2.3.0",
     "mcp>=0.1.0",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 readme = "README.md"
 license = {file = "LICENSE"}
 
@@ -27,5 +28,24 @@ allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 packages = ["src/discord_mcp"]
 
+[dependency-groups]
+dev = [
+    "pyright>=1.1",
+    "ruff>=0.9",
+]
+
 [project.scripts]
 mcp-discord = "discord_mcp:main"
+
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "W"]
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "basic"
+venvPath = "."
+venv = ".venv"

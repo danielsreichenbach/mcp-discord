@@ -31,14 +31,29 @@ This is a fork of [hanweg/mcp-discord](https://github.com/hanweg/mcp-discord), m
 
 ## Prerequisites
 
-- Python 3.10+
+- Python 3.14+
 - [uv](https://docs.astral.sh/uv/) package manager
-- A Discord bot token with the following privileged intents enabled:
-  - MESSAGE CONTENT INTENT
-  - PRESENCE INTENT
-  - SERVER MEMBERS INTENT
+- A Discord bot token (see below)
 
-Create a bot at the [Discord Developer Portal](https://discord.com/developers/applications) and invite it to your server using the OAuth2 URL Generator.
+### Creating the Discord bot
+
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) and create a new application.
+2. Go to **Bot** and click **Reset Token** to generate a bot token. Save it -- you will not see it again.
+3. Under **Privileged Gateway Intents**, enable:
+   - **Server Members Intent** -- required for `list_members`, `add_role`, `remove_role`
+   - **Message Content Intent** -- required for `read_messages` to access message text
+4. Go to **OAuth2 > URL Generator**. Select the scopes:
+   - `bot`
+5. Under **Bot Permissions**, select:
+   - **Manage Channels** -- `create_text_channel`, `delete_channel`
+   - **Manage Roles** -- `add_role`, `remove_role`
+   - **Manage Messages** -- `moderate_message` (delete messages)
+   - **Moderate Members** -- `moderate_message` (timeout users)
+   - **Send Messages** -- `send_message`
+   - **Read Message History** -- `read_messages`
+   - **Add Reactions** -- `add_reaction`, `add_multiple_reactions`, `remove_reaction`
+   - **View Channels** -- all channel and server read operations
+6. Copy the generated URL, open it in your browser, and add the bot to your server.
 
 ## Installation
 
@@ -90,7 +105,19 @@ Add the following to your Claude Desktop configuration file:
 
 ### Claude Code
 
-Add a `.mcp.json` file to your project root:
+Register the server with `claude mcp add`:
+
+```bash
+# Project-scoped (writes .mcp.json in the current directory)
+claude mcp add -s project -e DISCORD_TOKEN="${DISCORD_TOKEN}" \
+  discord -- uv --directory /absolute/path/to/mcp-discord run mcp-discord
+
+# User-scoped (available in all projects)
+claude mcp add -s user -e DISCORD_TOKEN="${DISCORD_TOKEN}" \
+  discord -- uv --directory /absolute/path/to/mcp-discord run mcp-discord
+```
+
+Or add a `.mcp.json` file to your project root manually:
 
 ```json
 {
@@ -112,7 +139,7 @@ Add a `.mcp.json` file to your project root:
 }
 ```
 
-Set `DISCORD_TOKEN` in your shell environment so that Claude Code can expand it at runtime.
+`DISCORD_TOKEN` must be set in your shell environment. Claude Code expands `${VAR}` references at runtime.
 
 ### Crush
 
@@ -144,10 +171,6 @@ Add the server to your `crush.json`:
 docker build -t mcp-discord .
 docker run -e DISCORD_TOKEN=your_bot_token mcp-discord
 ```
-
-### Smithery
-
-This server is also available via [Smithery](https://smithery.ai). See `smithery.yaml` for the configuration schema.
 
 ## License
 
