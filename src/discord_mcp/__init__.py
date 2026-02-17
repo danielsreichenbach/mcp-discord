@@ -15,7 +15,7 @@ def main() -> None:
     try:
         server.main()
     except KeyboardInterrupt:
-        print("\nShutting down Discord MCP server...")
+        pass  # MCP closes stdout during shutdown
 
 
 # Expose important items at package level
