@@ -20,6 +20,10 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 - Conventional Commits guidelines in `AGENTS.md`
 - `.mise.toml` for Python and uv tool versions
 - Daniel S. Reichenbach as project author
+- `client.py` module with Discord bot setup, utilities, and lifespan context manager
+- `handlers.py` module with pure async functions for tool actions
+- `resources.py` module with pure async functions for read-only data
+- Integration test infrastructure using pytest
 
 ### Changed
 
@@ -34,6 +38,9 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 - Import of `timedelta` directly instead of through `datetime` class
 - README rewritten with step-by-step Discord bot setup, required permissions, and `claude mcp add` usage
 - Codebase formatted with ruff (trailing commas, double quotes, line wrapping)
+- Refactored to FastMCP with 4-module split (client.py, handlers.py, resources.py, server.py)
+- Discord INFO logging suppressed; only discord-mcp logs at INFO level
+- Bot shutdown now has timeouts to prevent hanging on CTRL-C
 
 ### Fixed
 
@@ -44,6 +51,7 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 - `bot.user.name` access without None guard in `on_ready`
 - Unused `fetch_users` variable in `read_messages`
 - f-string without placeholders in `get_user_info` response
+- `__init__.py` wrapped sync `server.main()` in `asyncio.run()`, causing type error
 
 ### Removed
 

@@ -1,6 +1,5 @@
 """Discord integration for Model Context Protocol."""
 
-import asyncio
 import warnings
 
 __version__ = "0.1.0"
@@ -14,7 +13,7 @@ def main() -> None:
     from . import server
 
     try:
-        asyncio.run(server.main())
+        server.main()
     except KeyboardInterrupt:
         print("\nShutting down Discord MCP server...")
 
