@@ -25,37 +25,43 @@ def _get_bot(ctx: Context) -> "DiscordContext":
 
 
 @mcp.resource("discord://servers")
-async def list_servers_resource(ctx: Context) -> str:
+async def list_servers_resource() -> str:
+    ctx = mcp.get_context()
     servers = await resources.list_servers(_get_bot(ctx).bot)
     return json.dumps(servers, indent=2)
 
 
 @mcp.resource("discord://servers/{server_id}")
-async def get_server_info_resource(ctx: Context, server_id: str) -> str:
+async def get_server_info_resource(server_id: str) -> str:
+    ctx = mcp.get_context()
     info = await resources.get_server_info(_get_bot(ctx).bot, server_id)
     return json.dumps(info, indent=2)
 
 
 @mcp.resource("discord://servers/{server_id}/channels")
-async def get_channels_resource(ctx: Context, server_id: str) -> str:
+async def get_channels_resource(server_id: str) -> str:
+    ctx = mcp.get_context()
     channels = await resources.get_channels(_get_bot(ctx).bot, server_id)
     return json.dumps(channels, indent=2)
 
 
 @mcp.resource("discord://servers/{server_id}/members")
-async def list_members_resource(ctx: Context, server_id: str) -> str:
+async def list_members_resource(server_id: str) -> str:
+    ctx = mcp.get_context()
     members = await resources.list_members(_get_bot(ctx).bot, server_id)
     return json.dumps(members, indent=2)
 
 
 @mcp.resource("discord://servers/{server_id}/roles")
-async def list_roles_resource(ctx: Context, server_id: str) -> str:
+async def list_roles_resource(server_id: str) -> str:
+    ctx = mcp.get_context()
     roles = await resources.list_roles(_get_bot(ctx).bot, server_id)
     return json.dumps(roles, indent=2)
 
 
 @mcp.resource("discord://channels/{channel_id}/messages")
-async def read_messages_resource(ctx: Context, channel_id: str) -> str:
+async def read_messages_resource(channel_id: str) -> str:
+    ctx = mcp.get_context()
     messages = await resources.read_messages(_get_bot(ctx).bot, channel_id)
     return json.dumps(messages, indent=2)
 
