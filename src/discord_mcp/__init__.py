@@ -3,8 +3,6 @@
 import asyncio
 import warnings
 
-from . import server
-
 __version__ = "0.1.0"
 
 
@@ -13,6 +11,8 @@ def main() -> None:
     # Suppress PyNaCl warning since we don't use voice features
     warnings.filterwarnings("ignore", module="discord.client", message="PyNaCl is not installed")
 
+    from . import server
+
     try:
         asyncio.run(server.main())
     except KeyboardInterrupt:
@@ -20,4 +20,4 @@ def main() -> None:
 
 
 # Expose important items at package level
-__all__ = ["main", "server"]
+__all__ = ["main"]

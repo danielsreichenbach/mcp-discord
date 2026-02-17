@@ -33,8 +33,5 @@ COPY --from=uv --chown=app:app /app/.venv /app/.venv
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Set the environment variable for the Discord bot token
-ENV DISCORD_TOKEN=your_bot_token
-
 # when running the container, add --db-path and a bind mount to the host's db file
 ENTRYPOINT ["mcp-discord"]
