@@ -83,28 +83,46 @@ This is a fork of [hanweg/mcp-discord](https://github.com/hanweg/mcp-discord), m
 
 ### Required Permissions
 
+Permission names match the Discord Developer Portal (OAuth2 > URL Generator > Bot Permissions).
+
+#### General Permissions
+
 | Permission | Tools That Require It |
 |------------|----------------------|
-| **View Channels** | All channel/server read operations |
-| **Send Messages** | `send_message` |
-| **Read Message History** | `read_messages`, `list_pinned_messages` |
-| **Manage Messages** | `delete_message`, `bulk_delete_messages`, `pin_message`, `unpin_message`, `moderate_message` |
-| **Add Reactions** | `add_reaction`, `add_multiple_reactions`, `remove_reaction` |
-| **Manage Channels** | `create_text_channel`, `create_voice_channel`, `create_category`, `edit_channel`, `delete_channel`, `reorder_channels` |
-| **Manage Roles** | `create_role`, `edit_role`, `delete_role`, `reorder_roles`, `add_role`, `remove_role` |
+| **View Channels** | All read operations (`list_servers`, `get_server_info`, `get_channels`, `list_members`, `list_roles`, `get_user_info`) |
+| **View Audit Log** | `get_audit_log` |
+| **Manage Server** | `list_server_invites` |
+| **Manage Roles** | `add_role`, `remove_role`, `create_role`, `edit_role`, `delete_role`, `reorder_roles` |
+| **Manage Channels** | `create_text_channel`, `create_voice_channel`, `create_category`, `edit_channel`, `delete_channel`, `reorder_channels`, `list_channel_invites`, `delete_invite` |
 | **Kick Members** | `kick_member` |
 | **Ban Members** | `ban_member`, `unban_member`, `list_bans` |
-| **Moderate Members** | `moderate_message`, `edit_member`, `remove_timeout` |
-| **View Audit Log** | `get_audit_log` |
-| **Manage Emojis and Stickers** | `create_emoji`, `delete_emoji` |
-| **Create Invites** | `create_invite` |
-| **Manage Invites** | `list_server_invites`, `list_channel_invites`, `delete_invite` |
+| **Create Instant Invite** | `create_invite` |
+| **Manage Nicknames** | `edit_member` (nickname changes) |
+| **Manage Expressions** | `create_emoji`, `delete_emoji` |
+| **Moderate Members** | `moderate_message`, `edit_member` (timeout), `remove_timeout` |
 
-#### Administrator Permission (Recommended for full functionality)
-For servers where the bot needs full management capabilities, enable **Administrator** which includes all the above permissions.
+#### Text Permissions
+
+| Permission | Tools That Require It |
+|------------|----------------------|
+| **Send Messages** | `send_message` |
+| **Manage Messages** | `delete_message`, `bulk_delete_messages`, `moderate_message` |
+| **Pin Messages** | `pin_message`, `unpin_message` |
+| **Read Message History** | `read_messages`, `list_pinned_messages` |
+| **Add Reactions** | `add_reaction`, `add_multiple_reactions`, `remove_reaction` |
+
+#### Voice Permissions
+
+| Permission | Tools That Require It |
+|------------|----------------------|
+| **Mute Members** | `edit_member` (voice mute) |
+| **Deafen Members** | `edit_member` (voice deafen) |
+
+#### Administrator (Recommended for full functionality)
+For servers where the bot needs all management capabilities, enable **Administrator** which includes every permission listed above.
 
 #### Minimal Permission Setup
-For basic functionality (messaging and reactions only):
+For messaging and reactions only:
 - View Channels
 - Send Messages
 - Read Message History
