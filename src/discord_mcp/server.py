@@ -563,6 +563,34 @@ async def delete_emoji(
     return f"Deleted emoji :{result['emoji_name']}: (ID: {result['emoji_id']})"
 
 
+# ============================================================================
+# Thread Discovery Tools
+# ============================================================================
+
+
+@mcp.tool()
+async def list_threads(
+    server_id: str,
+    ctx: Context,
+    channel_id: str | None = None,
+    include_archived: bool = False,
+) -> str:
+    """List active (and optionally archived) threads in a server or channel."""
+    result = await handlers.list_threads(
+        _get_bot(ctx).bot, server_id, channel_id=channel_id, include_archived=include_archived
+    )
+    if not result["threads"]:
+        return "No threads found."
+    lines = []
+    for t in result["threads"]:
+        status = "archived" if t["archived"] else "active"
+        lines.append(
+            f"- {t['name']} (ID: {t['id']}, parent: #{t['parent_name']}, "
+            f"{status}, messages: {t['message_count']}, members: {t['member_count']})"
+        )
+    return f"Threads ({result['count']}):\n" + "\n".join(lines)
+
+
 # Read tools (wrappers around resources for tool access)
 
 
@@ -601,8 +629,18 @@ async def list_roles(server_id: str, ctx: Context) -> str:
 
 
 @mcp.tool()
-async def read_messages(channel_id: str, ctx: Context, limit: int = 10) -> str:
-    messages = await resources.read_messages(_get_bot(ctx).bot, channel_id, limit)
+async def read_messages(
+    channel_id: str,
+    ctx: Context,
+    limit: int = 50,
+    before: str | None = None,
+    after: str | None = None,
+    oldest_first: bool = False,
+) -> str:
+    """Read messages from a channel or thread. Supports pagination via before/after message IDs."""
+    messages = await resources.read_messages(
+        _get_bot(ctx).bot, channel_id, limit, before=before, after=after, oldest_first=oldest_first
+    )
 
     def format_reaction(r: dict) -> str:
         return f"{r['emoji']}({r['count']})"
@@ -610,8 +648,18 @@ async def read_messages(channel_id: str, ctx: Context, limit: int = 10) -> str:
     lines = []
     for m in messages:
         reactions = ", ".join(format_reaction(r) for r in m["reactions"]) if m["reactions"] else "No reactions"
-        lines.append(f"[{m['id']}] {m['author']} ({m['timestamp']}): {m['content']}\nReactions: {reactions}")
-    return f"Retrieved {len(messages)} messages:\n\n" + "\n".join(lines)
+        parts = [f"[{m['id']}] {m['author']} ({m['timestamp']}): {m['content']}", f"Reactions: {reactions}"]
+
+        if m.get("attachments"):
+            att_strs = [f"{a['filename']} ({a['content_type'] or 'unknown'})" for a in m["attachments"]]
+            parts.append(f"Attachments: {', '.join(att_strs)}")
+
+        if m.get("embeds"):
+            emb_strs = [e.get("title") or e.get("url") or "embed" for e in m["embeds"]]
+            parts.append(f"Embeds: {', '.join(emb_strs)}")
+
+        lines.append("\n".join(parts))
+    return f"Retrieved {len(messages)} messages:\n\n" + "\n\n".join(lines)
 
 
 @mcp.tool()

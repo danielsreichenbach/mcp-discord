@@ -45,6 +45,18 @@ def require_text_channel(channel: object, channel_id: str) -> discord.TextChanne
     return channel
 
 
+def require_messageable_channel(
+    channel: object, channel_id: str
+) -> discord.TextChannel | discord.Thread:
+    """Validate that a fetched channel is a text channel or thread.
+
+    Both types support .history() for reading messages.
+    """
+    if isinstance(channel, (discord.TextChannel, discord.Thread)):
+        return channel
+    raise ValueError(f"Channel {channel_id} is not a text channel or thread")
+
+
 def require_guild_channel(channel: object, channel_id: str) -> discord.abc.GuildChannel:
     """Validate that a fetched channel is a guild channel."""
     if not isinstance(channel, discord.abc.GuildChannel):

@@ -9,7 +9,9 @@ from typing import Any
 
 from discord.ext import commands
 
-from .client import parse_id, require_text_channel
+import discord
+
+from .client import parse_id, require_messageable_channel
 
 
 async def list_servers(client: commands.Bot) -> list[dict[str, Any]]:
@@ -91,13 +93,36 @@ async def list_roles(client: commands.Bot, server_id: str) -> list[dict[str, Any
     ]
 
 
-async def read_messages(client: commands.Bot, channel_id: str, limit: int = 10) -> list[dict[str, Any]]:
-    """Read recent messages from a channel."""
+async def read_messages(
+    client: commands.Bot,
+    channel_id: str,
+    limit: int = 50,
+    before: str | None = None,
+    after: str | None = None,
+    oldest_first: bool = False,
+) -> list[dict[str, Any]]:
+    """Read messages from a channel or thread.
+
+    Args:
+        client: The Discord bot client.
+        channel_id: ID of a text channel or thread.
+        limit: Max messages to return (capped at 100).
+        before: Message ID — fetch messages older than this.
+        after: Message ID — fetch messages newer than this.
+        oldest_first: Return messages in chronological order.
+    """
     channel = await client.fetch_channel(parse_id(channel_id, "channel_id"))
-    text_channel = require_text_channel(channel, channel_id)
+    messageable = require_messageable_channel(channel, channel_id)
     actual_limit = min(limit, 100)
+
+    history_kwargs: dict[str, Any] = {"limit": actual_limit, "oldest_first": oldest_first}
+    if before is not None:
+        history_kwargs["before"] = discord.Object(id=parse_id(before, "before"))
+    if after is not None:
+        history_kwargs["after"] = discord.Object(id=parse_id(after, "after"))
+
     messages = []
-    async for message in text_channel.history(limit=actual_limit):
+    async for message in messageable.history(**history_kwargs):
         reaction_data = []
         for reaction in message.reactions:
             emoji = reaction.emoji
@@ -108,6 +133,25 @@ async def read_messages(client: commands.Bot, channel_id: str, limit: int = 10) 
             else:
                 emoji_str = str(emoji.id)
             reaction_data.append({"emoji": emoji_str, "count": reaction.count})
+
+        attachment_data = [
+            {
+                "filename": att.filename,
+                "url": att.url,
+                "content_type": att.content_type,
+            }
+            for att in message.attachments
+        ]
+
+        embed_data = [
+            {
+                "title": emb.title,
+                "description": emb.description,
+                "url": emb.url,
+            }
+            for emb in message.embeds
+        ]
+
         messages.append(
             {
                 "id": str(message.id),
@@ -115,6 +159,8 @@ async def read_messages(client: commands.Bot, channel_id: str, limit: int = 10) 
                 "content": message.content,
                 "timestamp": message.created_at.isoformat(),
                 "reactions": reaction_data,
+                "attachments": attachment_data,
+                "embeds": embed_data,
             }
         )
     return messages

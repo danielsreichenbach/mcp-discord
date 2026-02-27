@@ -1899,3 +1899,75 @@ async def delete_emoji(
         raise PermissionError(f"Missing permissions to delete emoji: {e}") from e
     except discord.HTTPException as e:
         raise RuntimeError(f"Discord API error: {e}") from e
+
+
+async def list_threads(
+    client: commands.Bot,
+    server_id: str,
+    channel_id: str | None = None,
+    include_archived: bool = False,
+) -> dict[str, Any]:
+    """List active (and optionally archived) threads in a server or channel.
+
+    Args:
+        client: Discord bot client
+        server_id: Guild/server ID
+        channel_id: Optional channel ID to restrict to a single channel
+        include_archived: Whether to also fetch archived threads
+
+    Returns:
+        Dict with a list of thread metadata and count
+
+    Raises:
+        ValueError: If server or channel not found
+        PermissionError: If bot lacks permissions
+    """
+    try:
+        guild = await client.fetch_guild(parse_id(server_id, "server_id"))
+        if guild is None:
+            raise ValueError(f"Server {server_id} not found")
+
+        channels_to_scan: list[discord.TextChannel] = []
+
+        if channel_id is not None:
+            ch = await client.fetch_channel(parse_id(channel_id, "channel_id"))
+            if not isinstance(ch, discord.TextChannel):
+                raise ValueError(f"Channel {channel_id} is not a text channel")
+            channels_to_scan.append(ch)
+        else:
+            fetched = await guild.fetch_channels()
+            channels_to_scan = [c for c in fetched if isinstance(c, discord.TextChannel)]
+
+        threads: list[dict[str, Any]] = []
+
+        for ch in channels_to_scan:
+            # Active threads are available on the channel object
+            for thread in ch.threads:
+                threads.append(_thread_to_dict(thread, ch))
+
+            if include_archived:
+                async for thread in ch.archived_threads():
+                    threads.append(_thread_to_dict(thread, ch))
+
+        return {"threads": threads, "count": len(threads)}
+
+    except discord.NotFound as e:
+        raise ValueError(f"Server or channel not found") from e
+    except discord.Forbidden as e:
+        raise PermissionError(f"Missing permissions to list threads: {e}") from e
+    except discord.HTTPException as e:
+        raise RuntimeError(f"Discord API error: {e}") from e
+
+
+def _thread_to_dict(thread: discord.Thread, parent: discord.TextChannel) -> dict[str, Any]:
+    """Convert a Thread object to a serializable dict."""
+    return {
+        "id": str(thread.id),
+        "name": thread.name,
+        "parent_id": str(parent.id),
+        "parent_name": parent.name,
+        "archived": thread.archived,
+        "message_count": thread.message_count,
+        "member_count": thread.member_count,
+        "created_at": thread.created_at.isoformat() if thread.created_at else None,
+    }

@@ -66,7 +66,7 @@ def _make_mock_bot() -> MagicMock:
     channel.edit = AsyncMock()
     channel.delete = AsyncMock()
 
-    async def empty_history(limit=10):  # noqa: ANN001
+    async def empty_history(**kwargs):  # noqa: ANN003
         return
         yield
 

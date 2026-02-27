@@ -293,26 +293,47 @@ class TestListRoles:
         assert set(result[0].keys()) == expected_keys
 
 
+def _make_message(
+    msg_id=888,
+    author_str="User#1234",
+    content="Hello world",
+    reactions=None,
+    attachments=None,
+    embeds=None,
+):
+    """Helper to build a mock discord.Message."""
+    msg = MagicMock()
+    msg.id = msg_id
+    msg.author = MagicMock()
+    msg.author.__str__ = lambda self: author_str
+    msg.content = content
+    msg.created_at = datetime(2024, 1, 1, tzinfo=UTC)
+    msg.reactions = reactions or []
+    msg.attachments = attachments or []
+    msg.embeds = embeds or []
+    return msg
+
+
+def _channel_with_messages(spec, messages):
+    """Return a mock channel whose .history() yields *messages*."""
+    channel = MagicMock(spec=spec)
+
+    async def mock_history(**kwargs):  # noqa: ANN003
+        for m in messages:
+            yield m
+
+    channel.history = MagicMock(side_effect=mock_history)
+    return channel
+
+
 class TestReadMessages:
     """Tests for read_messages resource."""
 
     @pytest.mark.asyncio
     async def test_returns_messages(self):
         client = MagicMock(spec=commands.Bot)
-        channel = MagicMock(spec=discord.TextChannel)
-
-        msg = MagicMock()
-        msg.id = 888
-        msg.author = MagicMock()
-        msg.author.__str__ = lambda self: "User#1234"
-        msg.content = "Hello world"
-        msg.created_at = datetime(2024, 1, 1, tzinfo=UTC)
-        msg.reactions = []
-
-        async def mock_history(limit):
-            yield msg
-
-        channel.history = MagicMock(side_effect=mock_history)
+        msg = _make_message()
+        channel = _channel_with_messages(discord.TextChannel, [msg])
         client.fetch_channel = AsyncMock(return_value=channel)
 
         result = await resources.read_messages(client, "555", limit=10)
@@ -321,14 +342,31 @@ class TestReadMessages:
         assert result[0]["id"] == "888"
         assert result[0]["content"] == "Hello world"
         assert result[0]["reactions"] == []
+        assert result[0]["attachments"] == []
+        assert result[0]["embeds"] == []
+
+    @pytest.mark.asyncio
+    async def test_default_limit_is_50(self):
+        client = MagicMock(spec=commands.Bot)
+        channel = MagicMock(spec=discord.TextChannel)
+
+        async def mock_history(**kwargs):  # noqa: ANN003
+            assert kwargs["limit"] == 50
+            return
+            yield
+
+        channel.history = MagicMock(side_effect=mock_history)
+        client.fetch_channel = AsyncMock(return_value=channel)
+
+        await resources.read_messages(client, "555")
 
     @pytest.mark.asyncio
     async def test_limit_capped_at_100(self):
         client = MagicMock(spec=commands.Bot)
         channel = MagicMock(spec=discord.TextChannel)
 
-        async def mock_history(limit):
-            assert limit == 100
+        async def mock_history(**kwargs):  # noqa: ANN003
+            assert kwargs["limit"] == 100
             return
             yield
 
@@ -338,26 +376,130 @@ class TestReadMessages:
         await resources.read_messages(client, "555", limit=500)
 
     @pytest.mark.asyncio
-    async def test_str_emoji_reaction(self):
+    async def test_before_parameter(self):
         client = MagicMock(spec=commands.Bot)
         channel = MagicMock(spec=discord.TextChannel)
+        captured = {}
+
+        async def mock_history(**kwargs):  # noqa: ANN003
+            captured.update(kwargs)
+            return
+            yield
+
+        channel.history = MagicMock(side_effect=mock_history)
+        client.fetch_channel = AsyncMock(return_value=channel)
+
+        await resources.read_messages(client, "555", before="12345")
+
+        assert captured["before"].id == 12345
+
+    @pytest.mark.asyncio
+    async def test_after_parameter(self):
+        client = MagicMock(spec=commands.Bot)
+        channel = MagicMock(spec=discord.TextChannel)
+        captured = {}
+
+        async def mock_history(**kwargs):  # noqa: ANN003
+            captured.update(kwargs)
+            return
+            yield
+
+        channel.history = MagicMock(side_effect=mock_history)
+        client.fetch_channel = AsyncMock(return_value=channel)
+
+        await resources.read_messages(client, "555", after="67890")
+
+        assert captured["after"].id == 67890
+
+    @pytest.mark.asyncio
+    async def test_oldest_first_parameter(self):
+        client = MagicMock(spec=commands.Bot)
+        channel = MagicMock(spec=discord.TextChannel)
+        captured = {}
+
+        async def mock_history(**kwargs):  # noqa: ANN003
+            captured.update(kwargs)
+            return
+            yield
+
+        channel.history = MagicMock(side_effect=mock_history)
+        client.fetch_channel = AsyncMock(return_value=channel)
+
+        await resources.read_messages(client, "555", oldest_first=True)
+
+        assert captured["oldest_first"] is True
+
+    @pytest.mark.asyncio
+    async def test_invalid_before_raises(self):
+        client = MagicMock(spec=commands.Bot)
+        channel = MagicMock(spec=discord.TextChannel)
+        client.fetch_channel = AsyncMock(return_value=channel)
+
+        with pytest.raises(ValueError, match="Invalid before"):
+            await resources.read_messages(client, "555", before="not_an_id")
+
+    @pytest.mark.asyncio
+    async def test_thread_channel_accepted(self):
+        client = MagicMock(spec=commands.Bot)
+        msg = _make_message()
+        channel = _channel_with_messages(discord.Thread, [msg])
+        client.fetch_channel = AsyncMock(return_value=channel)
+
+        result = await resources.read_messages(client, "555", limit=10)
+
+        assert len(result) == 1
+        assert result[0]["id"] == "888"
+
+    @pytest.mark.asyncio
+    async def test_attachment_metadata(self):
+        client = MagicMock(spec=commands.Bot)
+
+        att = MagicMock()
+        att.filename = "image.png"
+        att.url = "https://cdn.discordapp.com/attachments/1/2/image.png"
+        att.content_type = "image/png"
+
+        msg = _make_message(attachments=[att])
+        channel = _channel_with_messages(discord.TextChannel, [msg])
+        client.fetch_channel = AsyncMock(return_value=channel)
+
+        result = await resources.read_messages(client, "555")
+
+        assert len(result[0]["attachments"]) == 1
+        assert result[0]["attachments"][0]["filename"] == "image.png"
+        assert result[0]["attachments"][0]["url"] == "https://cdn.discordapp.com/attachments/1/2/image.png"
+        assert result[0]["attachments"][0]["content_type"] == "image/png"
+
+    @pytest.mark.asyncio
+    async def test_embed_metadata(self):
+        client = MagicMock(spec=commands.Bot)
+
+        emb = MagicMock()
+        emb.title = "Guide Title"
+        emb.description = "A modding guide"
+        emb.url = "https://example.com"
+
+        msg = _make_message(embeds=[emb])
+        channel = _channel_with_messages(discord.TextChannel, [msg])
+        client.fetch_channel = AsyncMock(return_value=channel)
+
+        result = await resources.read_messages(client, "555")
+
+        assert len(result[0]["embeds"]) == 1
+        assert result[0]["embeds"][0]["title"] == "Guide Title"
+        assert result[0]["embeds"][0]["description"] == "A modding guide"
+        assert result[0]["embeds"][0]["url"] == "https://example.com"
+
+    @pytest.mark.asyncio
+    async def test_str_emoji_reaction(self):
+        client = MagicMock(spec=commands.Bot)
 
         reaction = MagicMock()
         reaction.emoji = "👍"
         reaction.count = 3
 
-        msg = MagicMock()
-        msg.id = 888
-        msg.author = MagicMock()
-        msg.author.__str__ = lambda self: "User"
-        msg.content = "test"
-        msg.created_at = datetime(2024, 1, 1, tzinfo=UTC)
-        msg.reactions = [reaction]
-
-        async def mock_history(limit):
-            yield msg
-
-        channel.history = MagicMock(side_effect=mock_history)
+        msg = _make_message(reactions=[reaction])
+        channel = _channel_with_messages(discord.TextChannel, [msg])
         client.fetch_channel = AsyncMock(return_value=channel)
 
         result = await resources.read_messages(client, "555")
@@ -367,27 +509,15 @@ class TestReadMessages:
     @pytest.mark.asyncio
     async def test_named_emoji_reaction(self):
         client = MagicMock(spec=commands.Bot)
-        channel = MagicMock(spec=discord.TextChannel)
 
-        # Not a str, has .name attribute — takes the hasattr(emoji, "name") path
         emoji_obj = MagicMock(spec=["name"])
         emoji_obj.name = "custom_emoji"
         reaction = MagicMock()
         reaction.emoji = emoji_obj
         reaction.count = 1
 
-        msg = MagicMock()
-        msg.id = 888
-        msg.author = MagicMock()
-        msg.author.__str__ = lambda self: "User"
-        msg.content = "test"
-        msg.created_at = datetime(2024, 1, 1, tzinfo=UTC)
-        msg.reactions = [reaction]
-
-        async def mock_history(limit):  # noqa: ANN001
-            yield msg
-
-        channel.history = MagicMock(side_effect=mock_history)
+        msg = _make_message(reactions=[reaction])
+        channel = _channel_with_messages(discord.TextChannel, [msg])
         client.fetch_channel = AsyncMock(return_value=channel)
 
         result = await resources.read_messages(client, "555")
@@ -396,9 +526,7 @@ class TestReadMessages:
     @pytest.mark.asyncio
     async def test_id_only_emoji_reaction(self):
         client = MagicMock(spec=commands.Bot)
-        channel = MagicMock(spec=discord.TextChannel)
 
-        # Has .name but it's None, and has .id — takes the str(emoji.id) path
         emoji_obj = MagicMock(spec=["name", "id"])
         emoji_obj.name = None
         emoji_obj.id = 999999
@@ -406,22 +534,11 @@ class TestReadMessages:
         reaction.emoji = emoji_obj
         reaction.count = 2
 
-        msg = MagicMock()
-        msg.id = 888
-        msg.author = MagicMock()
-        msg.author.__str__ = lambda self: "User"
-        msg.content = "test"
-        msg.created_at = datetime(2024, 1, 1, tzinfo=UTC)
-        msg.reactions = [reaction]
-
-        async def mock_history(limit):  # noqa: ANN001
-            yield msg
-
-        channel.history = MagicMock(side_effect=mock_history)
+        msg = _make_message(reactions=[reaction])
+        channel = _channel_with_messages(discord.TextChannel, [msg])
         client.fetch_channel = AsyncMock(return_value=channel)
 
         result = await resources.read_messages(client, "555")
-        # Falls through to str(emoji.id) path
         assert result[0]["reactions"][0]["emoji"] == "999999"
 
     @pytest.mark.asyncio
@@ -430,7 +547,7 @@ class TestReadMessages:
         channel = MagicMock(spec=discord.VoiceChannel)
         client.fetch_channel = AsyncMock(return_value=channel)
 
-        with pytest.raises(ValueError, match="not a text channel"):
+        with pytest.raises(ValueError, match="not a text channel or thread"):
             await resources.read_messages(client, "555")
 
 

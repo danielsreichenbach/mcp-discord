@@ -57,6 +57,7 @@ class TestToolDiscovery:
             "list_emojis",
             "create_emoji",
             "delete_emoji",
+            "list_threads",
             "list_servers",
             "get_server_info",
             "get_channels",
@@ -71,8 +72,8 @@ class TestToolDiscovery:
     async def test_tool_count(self, mcp_session):
         session, _ = mcp_session
         result = await session.list_tools()
-        # At least 44 tools registered
-        assert len(result.tools) >= 44
+        # At least 45 tools registered
+        assert len(result.tools) >= 45
 
 
 class TestResourceDiscovery:
@@ -181,6 +182,70 @@ class TestToolExecution:
 
         assert not result.isError
         assert "TestUser" in result.content[0].text
+
+
+    @pytest.mark.asyncio
+    async def test_read_messages_with_pagination(self, mcp_session):
+        session, mock_bot = mcp_session
+
+        msg = MagicMock()
+        msg.id = 999
+        msg.author = MagicMock()
+        msg.author.__str__ = lambda self: "Author"
+        msg.content = "Historical message"
+        msg.created_at = MagicMock()
+        msg.created_at.isoformat = MagicMock(return_value="2024-01-01T00:00:00+00:00")
+        msg.reactions = []
+        msg.attachments = []
+        msg.embeds = []
+
+        channel = mock_bot.fetch_channel.return_value
+
+        async def mock_history(**kwargs):
+            yield msg
+
+        channel.history = MagicMock(side_effect=mock_history)
+
+        result = await session.call_tool(
+            "read_messages",
+            {
+                "channel_id": "555555555555555555",
+                "before": "123456789012345678",
+                "limit": 50,
+            },
+        )
+
+        assert not result.isError
+        assert "Historical message" in result.content[0].text
+
+    @pytest.mark.asyncio
+    async def test_list_threads(self, mcp_session):
+        session, mock_bot = mcp_session
+        guild = mock_bot.fetch_guild.return_value
+
+        ch = MagicMock(spec=discord.TextChannel)
+        ch.id = 555555555555555555
+        ch.name = "general"
+
+        thread = MagicMock(spec=discord.Thread)
+        thread.id = 1001
+        thread.name = "help-thread"
+        thread.archived = False
+        thread.message_count = 42
+        thread.member_count = 5
+        thread.created_at = MagicMock()
+        thread.created_at.isoformat = MagicMock(return_value="2024-01-01T00:00:00+00:00")
+        ch.threads = [thread]
+
+        guild.fetch_channels = AsyncMock(return_value=[ch])
+
+        result = await session.call_tool(
+            "list_threads",
+            {"server_id": "987654321098765432"},
+        )
+
+        assert not result.isError
+        assert "help-thread" in result.content[0].text
 
 
 class TestErrorHandling:
