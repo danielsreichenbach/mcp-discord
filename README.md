@@ -61,6 +61,11 @@ This is a fork of [hanweg/mcp-discord](https://github.com/hanweg/mcp-discord), m
 ### Threads
 - `list_threads` -- List active and archived threads in a server or channel
 
+### Bot Invite & Permissions
+- `generate_invite_url` -- Generate an OAuth2 bot invite URL with permission presets
+- `list_bot_guilds` -- List guilds the bot is in with read-access status
+- `audit_bot_permissions` -- Audit bot permissions against preset profiles
+
 ### Audit & Emojis
 - `get_audit_log` -- Retrieve server audit logs
 - `list_emojis` -- List all custom emojis

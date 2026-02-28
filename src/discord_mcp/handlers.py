@@ -7,6 +7,7 @@ All functions take the Discord client as the first argument.
 from __future__ import annotations
 
 import base64
+import os
 import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -1970,4 +1971,129 @@ def _thread_to_dict(thread: discord.Thread, parent: discord.TextChannel) -> dict
         "message_count": thread.message_count,
         "member_count": thread.member_count,
         "created_at": thread.created_at.isoformat() if thread.created_at else None,
+    }
+
+
+# ============================================================================
+# Bot Invite & Permission Utilities
+# ============================================================================
+
+_PERMISSION_FLAGS: list[tuple[int, str]] = [
+    (0x00000001, "Create Instant Invite"),
+    (0x00000002, "Kick Members"),
+    (0x00000004, "Ban Members"),
+    (0x00000008, "Administrator"),
+    (0x00000010, "Manage Channels"),
+    (0x00000020, "Manage Server"),
+    (0x00000040, "Add Reactions"),
+    (0x00000080, "View Audit Log"),
+    (0x00000400, "View Channels"),
+    (0x00000800, "Send Messages"),
+    (0x00002000, "Manage Messages"),
+    (0x00004000, "Embed Links"),
+    (0x00008000, "Attach Files"),
+    (0x00010000, "Read Message History"),
+    (0x00020000, "Mention Everyone"),
+    (0x00040000, "Use External Emojis"),
+    (0x00100000, "Connect"),
+    (0x00200000, "Speak"),
+    (0x00400000, "Mute Members"),
+    (0x00800000, "Deafen Members"),
+    (0x01000000, "Move Members"),
+    (0x04000000, "Manage Nicknames"),
+    (0x08000000, "Manage Roles"),
+    (0x10000000, "Manage Webhooks"),
+    (0x40000000, "Manage Expressions"),
+    (0x0000100000000000, "Moderate Members"),
+]
+
+PERMISSION_PRESETS: dict[str, int] = {
+    "read_only": 0x00000400 | 0x00010000,  # View Channels + Read Message History = 66560
+    "moderate": (
+        0x00000400  # View Channels
+        | 0x00010000  # Read Message History
+        | 0x00002000  # Manage Messages
+        | 0x00000002  # Kick Members
+        | 0x00000004  # Ban Members
+    ),
+    "full": (
+        0x00000400  # View Channels
+        | 0x00010000  # Read Message History
+        | 0x00000800  # Send Messages
+        | 0x00002000  # Manage Messages
+        | 0x00000040  # Add Reactions
+        | 0x00000080  # View Audit Log
+        | 0x00000020  # Manage Server
+        | 0x08000000  # Manage Roles
+        | 0x00000010  # Manage Channels
+        | 0x00000002  # Kick Members
+        | 0x00000004  # Ban Members
+        | 0x00000001  # Create Instant Invite
+        | 0x04000000  # Manage Nicknames
+        | 0x40000000  # Manage Expressions
+        | 0x0000100000000000  # Moderate Members
+        | 0x00004000  # Embed Links
+        | 0x00008000  # Attach Files
+    ),
+}
+
+
+def _describe_permissions(value: int) -> list[str]:
+    """Return human-readable names for each set permission bit."""
+    names: list[str] = []
+    for bit, name in _PERMISSION_FLAGS:
+        if value & bit:
+            names.append(name)
+    return names
+
+
+async def generate_invite_url(
+    client: commands.Bot,
+    preset: str | None = None,
+    permissions: int | None = None,
+) -> dict[str, Any]:
+    """Generate an OAuth2 bot invite URL.
+
+    Uses *preset* to look up a predefined permission value, or accepts
+    a raw *permissions* integer.  Falls back to ``read_only`` when neither
+    is provided.
+    """
+    # Resolve application / client ID
+    app_id: str | None = None
+    if client.user is not None:
+        app_id = str(client.user.id)
+    if app_id is None:
+        app_id = os.environ.get("DISCORD_CLIENT_ID")
+    if app_id is None:
+        raise ValueError(
+            "Cannot determine application ID. "
+            "Ensure the bot is logged in or set DISCORD_CLIENT_ID."
+        )
+
+    # Resolve permission value
+    if permissions is not None:
+        perm_value = permissions
+        preset_used = None
+    elif preset is not None:
+        if preset not in PERMISSION_PRESETS:
+            raise ValueError(
+                f"Unknown preset {preset!r}. "
+                f"Available: {', '.join(sorted(PERMISSION_PRESETS))}"
+            )
+        perm_value = PERMISSION_PRESETS[preset]
+        preset_used = preset
+    else:
+        perm_value = PERMISSION_PRESETS["read_only"]
+        preset_used = "read_only"
+
+    url = (
+        f"https://discord.com/oauth2/authorize"
+        f"?client_id={app_id}&scope=bot&permissions={perm_value}"
+    )
+
+    return {
+        "url": url,
+        "permissions_value": perm_value,
+        "permissions": _describe_permissions(perm_value),
+        "preset": preset_used,
     }

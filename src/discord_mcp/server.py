@@ -571,6 +571,33 @@ async def list_threads(
     )
 
 
+# ============================================================================
+# Bot Invite & Permission Tools
+# ============================================================================
+
+
+@mcp.tool()
+async def generate_invite_url(
+    ctx: Context,
+    preset: str | None = None,
+    permissions: int | None = None,
+) -> dict[str, Any]:
+    """Generate an OAuth2 bot invite URL with permission presets or custom value."""
+    return await handlers.generate_invite_url(_get_bot(ctx).bot, preset=preset, permissions=permissions)
+
+
+@mcp.tool()
+async def list_bot_guilds(ctx: Context) -> list[dict[str, Any]]:
+    """List all guilds the bot is in with read-access status."""
+    return await resources.list_bot_guilds(_get_bot(ctx).bot)
+
+
+@mcp.tool()
+async def audit_bot_permissions(server_id: str, ctx: Context) -> dict[str, Any]:
+    """Audit bot permissions in a guild against permission presets."""
+    return await resources.audit_bot_permissions(_get_bot(ctx).bot, server_id)
+
+
 # Read tools (wrappers around resources for tool access)
 
 

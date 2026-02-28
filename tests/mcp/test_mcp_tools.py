@@ -66,6 +66,9 @@ class TestToolDiscovery:
             "list_roles",
             "read_messages",
             "get_user_info",
+            "generate_invite_url",
+            "list_bot_guilds",
+            "audit_bot_permissions",
         }
         assert expected.issubset(tool_names), f"Missing tools: {expected - tool_names}"
 
@@ -73,8 +76,8 @@ class TestToolDiscovery:
     async def test_tool_count(self, mcp_session):
         session, _ = mcp_session
         result = await session.list_tools()
-        # At least 45 tools registered
-        assert len(result.tools) >= 45
+        # At least 48 tools registered
+        assert len(result.tools) >= 48
 
 
 class TestResourceDiscovery:
@@ -254,6 +257,55 @@ class TestToolExecution:
         data = json.loads(result.content[0].text)
         assert data["count"] >= 1
         assert data["threads"][0]["name"] == "help-thread"
+
+
+    @pytest.mark.asyncio
+    async def test_generate_invite_url(self, mcp_session):
+        session, _ = mcp_session
+
+        result = await session.call_tool("generate_invite_url", {})
+
+        assert not result.isError
+        data = json.loads(result.content[0].text)
+        assert "url" in data
+        assert data["preset"] == "read_only"
+        assert "discord.com/oauth2/authorize" in data["url"]
+
+    @pytest.mark.asyncio
+    async def test_generate_invite_url_with_preset(self, mcp_session):
+        session, _ = mcp_session
+
+        result = await session.call_tool("generate_invite_url", {"preset": "moderate"})
+
+        assert not result.isError
+        data = json.loads(result.content[0].text)
+        assert data["preset"] == "moderate"
+
+    @pytest.mark.asyncio
+    async def test_list_bot_guilds(self, mcp_session):
+        session, _ = mcp_session
+
+        result = await session.call_tool("list_bot_guilds", {})
+
+        assert not result.isError
+        data = json.loads(result.content[0].text)
+        assert data["id"] == "987654321098765432"
+        assert data["name"] == "Test Server"
+        assert "has_read_access" in data
+
+    @pytest.mark.asyncio
+    async def test_audit_bot_permissions(self, mcp_session):
+        session, _ = mcp_session
+
+        result = await session.call_tool(
+            "audit_bot_permissions",
+            {"server_id": "987654321098765432"},
+        )
+
+        assert not result.isError
+        data = json.loads(result.content[0].text)
+        assert "presets" in data
+        assert "read_only" in data["presets"]
 
 
 class TestErrorHandling:

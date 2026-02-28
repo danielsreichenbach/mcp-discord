@@ -53,6 +53,11 @@ def _make_mock_bot() -> MagicMock:
     guild.bans = MagicMock(side_effect=empty_gen)
     guild.audit_logs = MagicMock(side_effect=empty_gen)
 
+    # Bot's own member in the guild (for permission checks)
+    bot_member = MagicMock(spec=discord.Member)
+    bot_member.guild_permissions = discord.Permissions(66560)  # read_only
+    guild.me = bot_member
+
     bot.fetch_guild = AsyncMock(return_value=guild)
     bot.guilds = [guild]
 
