@@ -58,6 +58,9 @@ This is a fork of [hanweg/mcp-discord](https://github.com/hanweg/mcp-discord), m
 - `list_channel_invites` -- List channel-specific invites
 - `delete_invite` -- Revoke an invite
 
+### Threads
+- `list_threads` -- List active and archived threads in a server or channel
+
 ### Audit & Emojis
 - `get_audit_log` -- Retrieve server audit logs
 - `list_emojis` -- List all custom emojis
