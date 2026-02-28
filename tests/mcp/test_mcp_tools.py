@@ -4,6 +4,7 @@ Tests tool and resource discovery and execution through the MCP protocol
 with a mock Discord bot injected via lifespan patching.
 """
 
+import json
 from unittest.mock import AsyncMock, MagicMock
 
 import discord
@@ -120,7 +121,8 @@ class TestToolExecution:
         )
 
         assert not result.isError
-        assert "Message sent" in result.content[0].text
+        data = json.loads(result.content[0].text)
+        assert "message_id" in data
 
     @pytest.mark.asyncio
     async def test_kick_member(self, mcp_session):
@@ -142,8 +144,9 @@ class TestToolExecution:
         )
 
         assert not result.isError
-        assert "Kicked" in result.content[0].text
-        assert "TestUser" in result.content[0].text
+        data = json.loads(result.content[0].text)
+        assert data["kicked"] is True
+        assert data["user_name"] == "TestUser"
 
     @pytest.mark.asyncio
     async def test_create_role(self, mcp_session):
@@ -161,7 +164,8 @@ class TestToolExecution:
         )
 
         assert not result.isError
-        assert "NewRole" in result.content[0].text
+        data = json.loads(result.content[0].text)
+        assert data["role_name"] == "NewRole"
 
     @pytest.mark.asyncio
     async def test_list_servers(self, mcp_session):
@@ -170,19 +174,19 @@ class TestToolExecution:
         result = await session.call_tool("list_servers", {})
 
         assert not result.isError
-        assert "Test Server" in result.content[0].text
+        assert len(result.content) >= 1
+        data = json.loads(result.content[0].text)
+        assert data["name"] == "Test Server"
 
     @pytest.mark.asyncio
     async def test_get_user_info(self, mcp_session):
         session, _ = mcp_session
 
-        result = await session.call_tool(
-            "get_user_info", {"user_id": "222222222222222222"}
-        )
+        result = await session.call_tool("get_user_info", {"user_id": "222222222222222222"})
 
         assert not result.isError
-        assert "TestUser" in result.content[0].text
-
+        data = json.loads(result.content[0].text)
+        assert data["name"] == "TestUser"
 
     @pytest.mark.asyncio
     async def test_read_messages_with_pagination(self, mcp_session):
@@ -216,7 +220,9 @@ class TestToolExecution:
         )
 
         assert not result.isError
-        assert "Historical message" in result.content[0].text
+        assert len(result.content) >= 1
+        data = json.loads(result.content[0].text)
+        assert data["content"] == "Historical message"
 
     @pytest.mark.asyncio
     async def test_list_threads(self, mcp_session):
@@ -245,7 +251,9 @@ class TestToolExecution:
         )
 
         assert not result.isError
-        assert "help-thread" in result.content[0].text
+        data = json.loads(result.content[0].text)
+        assert data["count"] >= 1
+        assert data["threads"][0]["name"] == "help-thread"
 
 
 class TestErrorHandling:
@@ -270,9 +278,7 @@ class TestErrorHandling:
         member = MagicMock(spec=discord.Member)
         member.id = 222222222222222222
         member.name = "TestUser"
-        member.kick = AsyncMock(
-            side_effect=discord.Forbidden(MagicMock(), "Missing permissions")
-        )
+        member.kick = AsyncMock(side_effect=discord.Forbidden(MagicMock(), "Missing permissions"))
         guild.fetch_member = AsyncMock(return_value=member)
 
         result = await session.call_tool(

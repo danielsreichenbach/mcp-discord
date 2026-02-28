@@ -33,6 +33,7 @@ def _make_mock_bot() -> MagicMock:
     guild.name = "Test Server"
     guild.owner_id = 111111111111111111
     guild.approximate_member_count = 50
+    guild.member_count = 50
     guild.created_at = datetime(2023, 1, 1, tzinfo=UTC)
     guild.description = "A test server"
     guild.premium_tier = 0
