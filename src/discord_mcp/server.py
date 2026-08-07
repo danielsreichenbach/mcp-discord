@@ -192,7 +192,10 @@ async def edit_member(
     deafen: bool | None = None,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    """Modify member properties: nickname, timeout, voice mute/deafen."""
+    """Modify member properties: nickname, timeout, voice mute/deafen.
+
+    Omit a field (or pass null) to leave it unchanged. Pass an empty string
+    for nick to clear the nickname; use remove_timeout to clear a timeout."""
     timeout_until: str | None | object = _SENTINEL
     if timeout_minutes is not None:
         timeout_until = (dt.datetime.now(dt.UTC) + dt.timedelta(minutes=timeout_minutes)).isoformat()

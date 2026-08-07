@@ -173,12 +173,8 @@ async def kick_member(
     """
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
         member = await guild.fetch_member(parse_id(user_id, "user_id"))
-        if member is None:
-            raise ValueError(f"Member {user_id} not found")
 
         await member.kick(reason=reason)
 
@@ -227,19 +223,12 @@ async def ban_member(
 
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
-        # Try to get member first, fall back to user object for banned/not in guild
-        user = None
         try:
             user = await guild.fetch_member(parse_id(user_id, "user_id"))
         except discord.NotFound:
             # User not in guild, fetch user object instead
             user = await client.fetch_user(parse_id(user_id, "user_id"))
-
-        if user is None:
-            raise ValueError(f"User {user_id} not found")
 
         await guild.ban(user, reason=reason, delete_message_days=delete_message_days)
 
@@ -282,12 +271,8 @@ async def unban_member(
     """
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
         user = await client.fetch_user(parse_id(user_id, "user_id"))
-        if user is None:
-            raise ValueError(f"User {user_id} not found")
 
         await guild.unban(user, reason=reason)
 
@@ -324,8 +309,6 @@ async def list_bans(
     """
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
         bans = []
         async for ban in guild.bans():
@@ -378,12 +361,8 @@ async def edit_member(
     """
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
         member = await guild.fetch_member(parse_id(user_id, "user_id"))
-        if member is None:
-            raise ValueError(f"Member {user_id} not found")
 
         changes: list[str] = []
         edit_kwargs: dict[str, Any] = {"reason": reason}
@@ -482,26 +461,6 @@ async def remove_timeout(
 # ============================================================================
 
 
-async def _fetch_guild_role(guild: discord.Guild, role_id: int) -> discord.Role:
-    """Fetch a role from guild by ID.
-
-    Args:
-        guild: Discord guild
-        role_id: Role ID to find
-
-    Returns:
-        Discord Role object
-
-    Raises:
-        ValueError: If role not found
-    """
-    roles = await guild.fetch_roles()
-    for role in roles:
-        if role.id == role_id:
-            return role
-    raise ValueError(f"Role {role_id} not found in guild")
-
-
 async def create_role(
     client: commands.Bot,
     server_id: str,
@@ -533,8 +492,6 @@ async def create_role(
     """
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
         kwargs: dict[str, Any] = {
             "name": name,
@@ -601,10 +558,8 @@ async def edit_role(
     """
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
-        role = await _fetch_guild_role(guild, parse_id(role_id, "role_id"))
+        role = await fetch_role(guild, parse_id(role_id, "role_id"))
 
         edit_kwargs: dict[str, Any] = {"reason": reason}
         changes: list[str] = []
@@ -673,10 +628,8 @@ async def delete_role(
     """
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
-        role = await _fetch_guild_role(guild, parse_id(role_id, "role_id"))
+        role = await fetch_role(guild, parse_id(role_id, "role_id"))
         role_name = role.name
         role_id_str = str(role.id)
 
@@ -719,8 +672,6 @@ async def reorder_roles(
     """
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
         # Convert to dict format expected by discord.py
         positions_dict: dict[discord.abc.Snowflake, int] = {}
@@ -729,7 +680,7 @@ async def reorder_roles(
             role_id = parse_id(str(item["id"]), "role_id")
             position = int(item["position"])
 
-            role = await _fetch_guild_role(guild, role_id)
+            role = await fetch_role(guild, role_id)
             positions_dict[role] = position
 
         # Perform reorder
@@ -795,8 +746,6 @@ async def edit_channel(
     """
     try:
         channel = await client.fetch_channel(parse_id(channel_id, "channel_id"))
-        if channel is None:
-            raise ValueError(f"Channel {channel_id} not found")
 
         if not isinstance(channel, discord.abc.GuildChannel):
             raise ValueError(f"Channel {channel_id} is not a guild channel")
@@ -875,8 +824,6 @@ async def create_category(
     """
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
         kwargs: dict[str, Any] = {"name": name}
         if position is not None:
@@ -927,8 +874,6 @@ async def create_voice_channel(
     """
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
         kwargs: dict[str, Any] = {"name": name}
 
@@ -991,9 +936,7 @@ async def reorder_channels(
         PermissionError: If bot lacks permissions
     """
     try:
-        guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
+        await client.fetch_guild(parse_id(server_id, "server_id"))  # validate server exists
 
         updated: list[dict[str, Any]] = []
 
@@ -1068,8 +1011,6 @@ async def create_invite(
     """
     try:
         channel = await client.fetch_channel(parse_id(channel_id, "channel_id"))
-        if channel is None:
-            raise ValueError(f"Channel {channel_id} not found")
 
         if not isinstance(channel, discord.abc.GuildChannel):
             raise ValueError(f"Channel {channel_id} is not a guild channel")
@@ -1120,8 +1061,6 @@ async def list_server_invites(
     """
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
         invites = await guild.invites()
 
@@ -1179,8 +1118,6 @@ async def list_channel_invites(
     """
     try:
         channel = await client.fetch_channel(parse_id(channel_id, "channel_id"))
-        if channel is None:
-            raise ValueError(f"Channel {channel_id} not found")
 
         if not isinstance(channel, discord.abc.GuildChannel):
             raise ValueError(f"Channel {channel_id} is not a guild channel")
@@ -1239,8 +1176,6 @@ async def delete_invite(
     """
     try:
         invite = await client.fetch_invite(invite_code)
-        if invite is None:
-            raise ValueError(f"Invite {invite_code} not found")
 
         await invite.delete(reason=reason)
 
@@ -1285,8 +1220,6 @@ async def edit_message(
     """
     try:
         channel = await client.fetch_channel(parse_id(channel_id, "channel_id"))
-        if channel is None:
-            raise ValueError(f"Channel {channel_id} not found")
 
         text_channel = require_text_channel(channel, channel_id)
         message = await text_channel.fetch_message(parse_id(message_id, "message_id"))
@@ -1328,8 +1261,6 @@ async def delete_message(
     """
     try:
         channel = await client.fetch_channel(parse_id(channel_id, "channel_id"))
-        if channel is None:
-            raise ValueError(f"Channel {channel_id} not found")
 
         text_channel = require_text_channel(channel, channel_id)
         message = await text_channel.fetch_message(parse_id(message_id, "message_id"))
@@ -1381,8 +1312,6 @@ async def bulk_delete_messages(
 
     try:
         channel = await client.fetch_channel(parse_id(channel_id, "channel_id"))
-        if channel is None:
-            raise ValueError(f"Channel {channel_id} not found")
 
         text_channel = require_text_channel(channel, channel_id)
 
@@ -1430,8 +1359,6 @@ async def pin_message(
     """
     try:
         channel = await client.fetch_channel(parse_id(channel_id, "channel_id"))
-        if channel is None:
-            raise ValueError(f"Channel {channel_id} not found")
 
         text_channel = require_text_channel(channel, channel_id)
         message = await text_channel.fetch_message(parse_id(message_id, "message_id"))
@@ -1475,8 +1402,6 @@ async def unpin_message(
     """
     try:
         channel = await client.fetch_channel(parse_id(channel_id, "channel_id"))
-        if channel is None:
-            raise ValueError(f"Channel {channel_id} not found")
 
         text_channel = require_text_channel(channel, channel_id)
         message = await text_channel.fetch_message(parse_id(message_id, "message_id"))
@@ -1516,8 +1441,6 @@ async def list_pinned_messages(
     """
     try:
         channel = await client.fetch_channel(parse_id(channel_id, "channel_id"))
-        if channel is None:
-            raise ValueError(f"Channel {channel_id} not found")
 
         text_channel = require_text_channel(channel, channel_id)
         pinned_messages = await text_channel.pins()
@@ -1630,16 +1553,12 @@ async def get_audit_log(
 
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
         # Fetch one extra entry to detect whether more pages exist.
         kwargs: dict[str, Any] = {"limit": limit + 1}
 
         if user_id is not None:
-            user = await client.fetch_user(parse_id(user_id, "user_id"))
-            if user:
-                kwargs["user"] = user
+            kwargs["user"] = await client.fetch_user(parse_id(user_id, "user_id"))
 
         if action_type is not None:
             kwargs["action"] = discord.AuditLogAction(action_type)
@@ -1746,8 +1665,6 @@ async def list_emojis(
     """
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
         emojis = await guild.fetch_emojis()
 
@@ -1806,8 +1723,6 @@ async def create_emoji(
 
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
         # Parse role IDs if provided
         role_objects = []
@@ -1873,8 +1788,6 @@ async def delete_emoji(
     """
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
         emoji = await _fetch_guild_emoji(guild, parse_id(emoji_id, "emoji_id"))
         emoji_name = emoji.name
@@ -1919,8 +1832,6 @@ async def list_threads(
     """
     try:
         guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-        if guild is None:
-            raise ValueError(f"Server {server_id} not found")
 
         channels_to_scan: list[discord.TextChannel] = []
 
