@@ -1,6 +1,6 @@
 # Discord MCP Server
 
-A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that exposes Discord bot operations as tools. MCP clients like Claude Desktop connect via stdio transport, and the server proxies requests to the Discord API through `discord.py`.
+A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that exposes Discord bot operations as tools. MCP hosts like [pi](https://github.com/nicobailon/pi-mcp-adapter) (via pi-mcp-adapter), Claude Desktop, and Claude Code connect via stdio transport, and the server proxies requests to the Discord API through `discord.py`.
 
 This is a fork of [hanweg/mcp-discord](https://github.com/hanweg/mcp-discord), modified for personal use. It may diverge from upstream as features are added or changed to fit specific workflows.
 
@@ -159,6 +159,61 @@ uv pip install audioop-lts
 ```bash
 DISCORD_TOKEN=<your_bot_token> uv run mcp-discord
 ```
+### MCP clients (mcp.json)
+
+Most MCP hosts — [pi](https://github.com/nicobailon/pi-mcp-adapter), Claude Code, Cursor, and others — read the standard `mcp.json` format. The entry runs the server with `uv`:
+
+```json
+{
+  "mcpServers": {
+    "discord": {
+      "command": "uv",
+      "args": ["--directory", "/absolute/path/to/mcp-discord", "run", "mcp-discord"],
+      "env": {
+        "DISCORD_TOKEN": "${DISCORD_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+Where to put it:
+
+| File | Scope |
+|------|-------|
+| `~/.config/mcp/mcp.json` | User-global (all projects) |
+| `.mcp.json` | Project-local |
+
+`DISCORD_TOKEN` must be set in your shell environment; `${VAR}` references are expanded by the host at runtime.
+
+#### pi (pi-mcp-adapter)
+
+[pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter) reads both files above automatically. Options worth setting for this server:
+
+- `directTools` — the server exposes 48+ tools, so the default single `mcp` proxy tool is the lean choice. Expose a subset directly with `"directTools": ["send_message", "read_messages"]`.
+- `approveTools` — require confirmation for destructive actions: `"approveTools": ["kick_*", "ban_*", "delete_*", "bulk_delete_*", "moderate_*"]`.
+- `protocolVersion` — defaults to `"legacy"`, which this server supports alongside the 2026-07-28 revision; no change needed.
+- `lifecycle` — defaults to `"lazy"`; the server process and Discord connection start on the first tool call.
+- Tool names are prefixed with the server name (`discord_send_message`). Set `toolPrefix: "none"` on the entry to drop the prefix.
+
+Example with options:
+
+```json
+{
+  "mcpServers": {
+    "discord": {
+      "command": "uv",
+      "args": ["--directory", "/absolute/path/to/mcp-discord", "run", "mcp-discord"],
+      "env": {
+        "DISCORD_TOKEN": "!command-that-prints-the-token"
+      },
+      "approveTools": ["kick_*", "ban_*", "delete_*", "bulk_delete_*", "moderate_*"]
+    }
+  }
+}
+```
+
+The `!command` env form runs the command when the server connects; use `${DISCORD_TOKEN}` to read a shell variable instead.
 
 ### Claude Desktop
 
@@ -200,29 +255,7 @@ claude mcp add -s user -e DISCORD_TOKEN="${DISCORD_TOKEN}" \
   discord -- uv --directory /absolute/path/to/mcp-discord run mcp-discord
 ```
 
-Or add a `.mcp.json` file to your project root manually:
-
-```json
-{
-  "mcpServers": {
-    "discord": {
-      "type": "stdio",
-      "command": "uv",
-      "args": [
-        "--directory",
-        "/absolute/path/to/mcp-discord",
-        "run",
-        "mcp-discord"
-      ],
-      "env": {
-        "DISCORD_TOKEN": "${DISCORD_TOKEN}"
-      }
-    }
-  }
-}
-```
-
-`DISCORD_TOKEN` must be set in your shell environment. Claude Code expands `${VAR}` references at runtime.
+The `.mcp.json` example above works with Claude Code as well.
 
 ### Crush
 

@@ -329,11 +329,13 @@ async def list_bans(
 
         bans = []
         async for ban in guild.bans():
-            bans.append({
-                "user_id": str(ban.user.id),
-                "user_name": ban.user.name,
-                "reason": ban.reason,
-            })
+            bans.append(
+                {
+                    "user_id": str(ban.user.id),
+                    "user_name": ban.user.name,
+                    "reason": ban.reason,
+                }
+            )
 
         return bans
 
@@ -422,9 +424,7 @@ async def edit_member(
             "user_id": str(member.id),
             "user_name": member.name,
             "nick": member.nick,
-            "timeout_until": (
-                member.timed_out_until.isoformat() if member.timed_out_until else None
-            ),
+            "timeout_until": (member.timed_out_until.isoformat() if member.timed_out_until else None),
             "changes": changes,
         }
 
@@ -644,8 +644,6 @@ async def edit_role(
 
     except discord.NotFound as e:
         raise ValueError(f"Server {server_id} not found") from e
-    except ValueError:
-        raise  # Re-raise role not found
     except discord.Forbidden as e:
         raise PermissionError(f"Missing permissions to edit role: {e}") from e
     except discord.HTTPException as e:
@@ -692,8 +690,6 @@ async def delete_role(
 
     except discord.NotFound as e:
         raise ValueError(f"Server {server_id} not found") from e
-    except ValueError:
-        raise  # Re-raise role not found
     except discord.Forbidden as e:
         raise PermissionError(f"Missing permissions to delete role: {e}") from e
     except discord.HTTPException as e:
@@ -703,7 +699,7 @@ async def delete_role(
 async def reorder_roles(
     client: commands.Bot,
     server_id: str,
-    role_positions: list[dict[str, int]],
+    role_positions: list[dict[str, str | int]],
     reason: str | None = None,
 ) -> dict[str, Any]:
     """Change the position/order of roles.
@@ -731,7 +727,7 @@ async def reorder_roles(
 
         for item in role_positions:
             role_id = parse_id(str(item["id"]), "role_id")
-            position = item["position"]
+            position = int(item["position"])
 
             role = await _fetch_guild_role(guild, role_id)
             positions_dict[role] = position
@@ -756,8 +752,6 @@ async def reorder_roles(
 
     except discord.NotFound as e:
         raise ValueError(f"Server {server_id} not found") from e
-    except ValueError:
-        raise  # Re-raise role not found
     except discord.Forbidden as e:
         raise PermissionError(f"Missing permissions to reorder roles: {e}") from e
     except discord.HTTPException as e:
@@ -833,9 +827,7 @@ async def edit_channel(
         if default_auto_archive_duration is not None:
             valid_durations = [60, 1440, 4320, 10080]
             if default_auto_archive_duration not in valid_durations:
-                raise ValueError(
-                    f"default_auto_archive_duration must be one of {valid_durations}"
-                )
+                raise ValueError(f"default_auto_archive_duration must be one of {valid_durations}")
             edit_kwargs["default_auto_archive_duration"] = default_auto_archive_duration
             changes.append("default_auto_archive_duration")
 
@@ -1016,18 +1008,18 @@ async def reorder_channels(
 
             edit_kwargs: dict[str, Any] = {"position": position, "reason": reason}
             if parent_id is not None:
-                category = await client.fetch_channel(
-                    parse_id(str(parent_id), "parent_id")
-                )
+                category = await client.fetch_channel(parse_id(str(parent_id), "parent_id"))
                 if isinstance(category, discord.CategoryChannel):
                     edit_kwargs["category"] = category
 
             await channel.edit(**edit_kwargs)
-            updated.append({
-                "id": str(channel.id),
-                "name": channel.name,
-                "position": position,
-            })
+            updated.append(
+                {
+                    "id": str(channel.id),
+                    "name": channel.name,
+                    "position": position,
+                }
+            )
 
         return {
             "reordered": True,
@@ -1136,28 +1128,28 @@ async def list_server_invites(
         result = []
         for invite in invites:
             ch = invite.channel
-            result.append({
-                "code": invite.code,
-                "url": "https://discord.gg/" + invite.code,
-                "channel_id": str(ch.id) if ch else None,
-                "channel_name": getattr(ch, "name", None) if ch else None,
-                "inviter": {
-                    "id": str(invite.inviter.id),
-                    "name": invite.inviter.name,
-                } if invite.inviter else None,
-                "uses": invite.uses,
-                "max_uses": invite.max_uses,
-                "max_age": invite.max_age,
-                "temporary": invite.temporary,
-                "created_at": (
-                    invite.created_at.isoformat() if invite.created_at else None
-                ),
-                "expires_at": (
-                    invite.expires_at.isoformat()
-                    if hasattr(invite, "expires_at") and invite.expires_at
-                    else None
-                ),
-            })
+            result.append(
+                {
+                    "code": invite.code,
+                    "url": "https://discord.gg/" + invite.code,
+                    "channel_id": str(ch.id) if ch else None,
+                    "channel_name": getattr(ch, "name", None) if ch else None,
+                    "inviter": {
+                        "id": str(invite.inviter.id),
+                        "name": invite.inviter.name,
+                    }
+                    if invite.inviter
+                    else None,
+                    "uses": invite.uses,
+                    "max_uses": invite.max_uses,
+                    "max_age": invite.max_age,
+                    "temporary": invite.temporary,
+                    "created_at": (invite.created_at.isoformat() if invite.created_at else None),
+                    "expires_at": (
+                        invite.expires_at.isoformat() if hasattr(invite, "expires_at") and invite.expires_at else None
+                    ),
+                }
+            )
         return result
 
     except discord.NotFound as e:
@@ -1197,21 +1189,25 @@ async def list_channel_invites(
 
         result = []
         for invite in invites:
-            result.append({
-                "code": invite.code,
-                "url": "https://discord.gg/" + invite.code,
-                "channel_id": str(channel.id),
-                "channel_name": channel.name,
-                "inviter": {
-                    "id": str(invite.inviter.id),
-                    "name": invite.inviter.name,
-                } if invite.inviter else None,
-                "uses": invite.uses,
-                "max_uses": invite.max_uses,
-                "max_age": invite.max_age,
-                "temporary": invite.temporary,
-                "created_at": invite.created_at.isoformat() if invite.created_at else None,
-            })
+            result.append(
+                {
+                    "code": invite.code,
+                    "url": "https://discord.gg/" + invite.code,
+                    "channel_id": str(channel.id),
+                    "channel_name": channel.name,
+                    "inviter": {
+                        "id": str(invite.inviter.id),
+                        "name": invite.inviter.name,
+                    }
+                    if invite.inviter
+                    else None,
+                    "uses": invite.uses,
+                    "max_uses": invite.max_uses,
+                    "max_age": invite.max_age,
+                    "temporary": invite.temporary,
+                    "created_at": invite.created_at.isoformat() if invite.created_at else None,
+                }
+            )
         return result
 
     except discord.NotFound as e:
@@ -1637,8 +1633,8 @@ async def get_audit_log(
         if guild is None:
             raise ValueError(f"Server {server_id} not found")
 
-        # Build filter kwargs
-        kwargs: dict[str, Any] = {"limit": limit}
+        # Fetch one extra entry to detect whether more pages exist.
+        kwargs: dict[str, Any] = {"limit": limit + 1}
 
         if user_id is not None:
             user = await client.fetch_user(parse_id(user_id, "user_id"))
@@ -1652,50 +1648,50 @@ async def get_audit_log(
             kwargs["before"] = discord.Object(parse_id(before, "before_id"))
 
         entries = []
-        entry_count = 0
+        has_more = False
 
         async for entry in guild.audit_logs(**kwargs):
-            entry_count += 1
-            if entry_count > limit:
+            if len(entries) >= limit:
+                has_more = True
                 break
 
             action_value = entry.action.value
-            action_name = AUDIT_LOG_ACTION_NAMES.get(
-                action_value, f"UNKNOWN_{action_value}"
-            )
+            action_name = AUDIT_LOG_ACTION_NAMES.get(action_value, f"UNKNOWN_{action_value}")
 
             # Build changes from before/after diffs
             change_list: list[dict[str, str | None]] = []
             if entry.before and entry.after:
                 for attr, old_val in entry.before:
                     new_val = getattr(entry.after, attr, None)
-                    change_list.append({
-                        "key": attr,
-                        "old": str(old_val) if old_val is not None else None,
-                        "new": str(new_val) if new_val is not None else None,
-                    })
+                    change_list.append(
+                        {
+                            "key": attr,
+                            "old": str(old_val) if old_val is not None else None,
+                            "new": str(new_val) if new_val is not None else None,
+                        }
+                    )
 
             target_id = None
             if entry.target is not None:
                 target_id = str(entry.target.id)
 
-            entries.append({
-                "id": str(entry.id),
-                "action_type": action_value,
-                "action_type_name": action_name,
-                "user_id": str(entry.user.id) if entry.user else None,
-                "user_name": entry.user.name if entry.user else None,
-                "target_id": target_id,
-                "changes": change_list,
-                "reason": entry.reason,
-                "created_at": (
-                    entry.created_at.isoformat() if entry.created_at else None
-                ),
-            })
+            entries.append(
+                {
+                    "id": str(entry.id),
+                    "action_type": action_value,
+                    "action_type_name": action_name,
+                    "user_id": str(entry.user.id) if entry.user else None,
+                    "user_name": entry.user.name if entry.user else None,
+                    "target_id": target_id,
+                    "changes": change_list,
+                    "reason": entry.reason,
+                    "created_at": (entry.created_at.isoformat() if entry.created_at else None),
+                }
+            )
 
         return {
-            "entries": entries[:limit],
-            "has_more": entry_count > limit,
+            "entries": entries,
+            "has_more": has_more,
         }
 
     except discord.NotFound as e:
@@ -1892,8 +1888,6 @@ async def delete_emoji(
             "emoji_id": emoji_id_str,
         }
 
-    except ValueError:
-        raise  # Re-raise emoji not found
     except discord.NotFound as e:
         raise ValueError(f"Server {server_id} not found") from e
     except discord.Forbidden as e:
@@ -1953,7 +1947,7 @@ async def list_threads(
         return {"threads": threads, "count": len(threads)}
 
     except discord.NotFound as e:
-        raise ValueError(f"Server or channel not found") from e
+        raise ValueError("Server or channel not found") from e
     except discord.Forbidden as e:
         raise PermissionError(f"Missing permissions to list threads: {e}") from e
     except discord.HTTPException as e:
@@ -2065,10 +2059,7 @@ async def generate_invite_url(
     if app_id is None:
         app_id = os.environ.get("DISCORD_CLIENT_ID")
     if app_id is None:
-        raise ValueError(
-            "Cannot determine application ID. "
-            "Ensure the bot is logged in or set DISCORD_CLIENT_ID."
-        )
+        raise ValueError("Cannot determine application ID. Ensure the bot is logged in or set DISCORD_CLIENT_ID.")
 
     # Resolve permission value
     if permissions is not None:
@@ -2076,20 +2067,14 @@ async def generate_invite_url(
         preset_used = None
     elif preset is not None:
         if preset not in PERMISSION_PRESETS:
-            raise ValueError(
-                f"Unknown preset {preset!r}. "
-                f"Available: {', '.join(sorted(PERMISSION_PRESETS))}"
-            )
+            raise ValueError(f"Unknown preset {preset!r}. Available: {', '.join(sorted(PERMISSION_PRESETS))}")
         perm_value = PERMISSION_PRESETS[preset]
         preset_used = preset
     else:
         perm_value = PERMISSION_PRESETS["read_only"]
         preset_used = "read_only"
 
-    url = (
-        f"https://discord.com/oauth2/authorize"
-        f"?client_id={app_id}&scope=bot&permissions={perm_value}"
-    )
+    url = f"https://discord.com/oauth2/authorize?client_id={app_id}&scope=bot&permissions={perm_value}"
 
     return {
         "url": url,

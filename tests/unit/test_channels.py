@@ -21,11 +21,7 @@ class TestEditChannel:
         mock_text_channel.edit = AsyncMock()
         mock_text_channel.name = "new-name"
 
-        result = await handlers.edit_channel(
-            mock_bot,
-            str(mock_text_channel.id),
-            name="new-name"
-        )
+        result = await handlers.edit_channel(mock_bot, str(mock_text_channel.id), name="new-name")
 
         mock_text_channel.edit.assert_called_once()
         assert result["channel_id"] == str(mock_text_channel.id)
@@ -39,11 +35,7 @@ class TestEditChannel:
         mock_text_channel.edit = AsyncMock()
         mock_text_channel.topic = "New topic"
 
-        result = await handlers.edit_channel(
-            mock_bot,
-            str(mock_text_channel.id),
-            topic="New topic"
-        )
+        result = await handlers.edit_channel(mock_bot, str(mock_text_channel.id), topic="New topic")
 
         assert "topic" in result["changes"]
 
@@ -53,11 +45,7 @@ class TestEditChannel:
         mock_bot.fetch_channel = AsyncMock(return_value=mock_text_channel)
         mock_text_channel.edit = AsyncMock()
 
-        result = await handlers.edit_channel(
-            mock_bot,
-            str(mock_text_channel.id),
-            slowmode_delay=30
-        )
+        result = await handlers.edit_channel(mock_bot, str(mock_text_channel.id), slowmode_delay=30)
 
         assert "slowmode_delay" in result["changes"]
 
@@ -67,11 +55,7 @@ class TestEditChannel:
         mock_bot.fetch_channel = AsyncMock(return_value=mock_text_channel)
         mock_text_channel.edit = AsyncMock()
 
-        result = await handlers.edit_channel(
-            mock_bot,
-            str(mock_text_channel.id),
-            nsfw=True
-        )
+        result = await handlers.edit_channel(mock_bot, str(mock_text_channel.id), nsfw=True)
 
         assert "nsfw" in result["changes"]
 
@@ -84,12 +68,7 @@ class TestEditChannel:
         mock_text_channel.topic = "New topic"
 
         result = await handlers.edit_channel(
-            mock_bot,
-            str(mock_text_channel.id),
-            name="new-name",
-            topic="New topic",
-            slowmode_delay=60,
-            nsfw=False
+            mock_bot, str(mock_text_channel.id), name="new-name", topic="New topic", slowmode_delay=60, nsfw=False
         )
 
         assert "name" in result["changes"]
@@ -106,9 +85,7 @@ class TestEditChannel:
     @pytest.mark.asyncio
     async def test_edit_channel_not_found(self, mock_bot):
         """Test editing a channel that doesn't exist."""
-        mock_bot.fetch_channel = AsyncMock(side_effect=discord.NotFound(
-            MagicMock(), "Channel not found"
-        ))
+        mock_bot.fetch_channel = AsyncMock(side_effect=discord.NotFound(MagicMock(), "Channel not found"))
 
         with pytest.raises(ValueError, match="Channel.*not found"):
             await handlers.edit_channel(mock_bot, "999999999999999999", name="test")
@@ -117,14 +94,10 @@ class TestEditChannel:
     async def test_edit_channel_forbidden(self, mock_bot, mock_text_channel):
         """Test editing when bot lacks permissions."""
         mock_bot.fetch_channel = AsyncMock(return_value=mock_text_channel)
-        mock_text_channel.edit = AsyncMock(side_effect=discord.Forbidden(
-            MagicMock(), "Missing permissions"
-        ))
+        mock_text_channel.edit = AsyncMock(side_effect=discord.Forbidden(MagicMock(), "Missing permissions"))
 
         with pytest.raises(PermissionError, match="Missing permissions"):
-            await handlers.edit_channel(
-                mock_bot, str(mock_text_channel.id), name="test"
-            )
+            await handlers.edit_channel(mock_bot, str(mock_text_channel.id), name="test")
 
 
 class TestCreateCategory:
@@ -137,11 +110,7 @@ class TestCreateCategory:
         mock_guild.create_category = AsyncMock(return_value=mock_category)
 
         result = await handlers.create_category(
-            mock_bot,
-            str(mock_guild.id),
-            name="Test Category",
-            position=0,
-            reason="Test category creation"
+            mock_bot, str(mock_guild.id), name="Test Category", position=0, reason="Test category creation"
         )
 
         mock_guild.create_category.assert_called_once()
@@ -154,11 +123,7 @@ class TestCreateCategory:
         mock_bot.fetch_guild = AsyncMock(return_value=mock_guild)
         mock_guild.create_category = AsyncMock(return_value=mock_category)
 
-        result = await handlers.create_category(
-            mock_bot,
-            str(mock_guild.id),
-            name="Test Category"
-        )
+        result = await handlers.create_category(mock_bot, str(mock_guild.id), name="Test Category")
 
         assert result["category_id"] == str(mock_category.id)
 
@@ -173,11 +138,7 @@ class TestCreateVoiceChannel:
         mock_guild.create_voice_channel = AsyncMock(return_value=mock_voice_channel)
 
         result = await handlers.create_voice_channel(
-            mock_bot,
-            str(mock_guild.id),
-            name="Test Voice",
-            bitrate=64000,
-            user_limit=10
+            mock_bot, str(mock_guild.id), name="Test Voice", bitrate=64000, user_limit=10
         )
 
         mock_guild.create_voice_channel.assert_called_once()
@@ -186,19 +147,14 @@ class TestCreateVoiceChannel:
         assert result["type"] == "voice"
 
     @pytest.mark.asyncio
-    async def test_create_voice_channel_with_category(
-        self, mock_bot, mock_guild, mock_voice_channel, mock_category
-    ):
+    async def test_create_voice_channel_with_category(self, mock_bot, mock_guild, mock_voice_channel, mock_category):
         """Test creating voice channel in a category."""
         mock_bot.fetch_guild = AsyncMock(return_value=mock_guild)
         mock_bot.fetch_channel = AsyncMock(return_value=mock_category)
         mock_guild.create_voice_channel = AsyncMock(return_value=mock_voice_channel)
 
         result = await handlers.create_voice_channel(
-            mock_bot,
-            str(mock_guild.id),
-            name="Test Voice",
-            category_id=str(mock_category.id)
+            mock_bot, str(mock_guild.id), name="Test Voice", category_id=str(mock_category.id)
         )
 
         assert result["channel_id"] == str(mock_voice_channel.id)
@@ -213,7 +169,7 @@ class TestCreateVoiceChannel:
                 mock_bot,
                 str(mock_guild.id),
                 name="Test Voice",
-                bitrate=1000  # Too low
+                bitrate=1000,  # Too low
             )
 
 
@@ -242,10 +198,7 @@ class TestReorderChannels:
         result = await handlers.reorder_channels(
             mock_bot,
             str(mock_guild.id),
-            [
-                {"id": str(channel1.id), "position": 2},
-                {"id": str(channel2.id), "position": 1}
-            ]
+            [{"id": str(channel1.id), "position": 2}, {"id": str(channel2.id), "position": 1}],
         )
 
         assert result["reordered"] is True
@@ -276,9 +229,7 @@ class TestListThreads:
         thread2 = self._make_thread(1002, "discussion-thread")
         mock_text_channel.threads = [thread1, thread2]
 
-        result = await handlers.list_threads(
-            mock_bot, str(mock_guild.id), channel_id=str(mock_text_channel.id)
-        )
+        result = await handlers.list_threads(mock_bot, str(mock_guild.id), channel_id=str(mock_text_channel.id))
 
         assert result["count"] == 2
         assert result["threads"][0]["name"] == "help-thread"
@@ -303,7 +254,8 @@ class TestListThreads:
         mock_text_channel.archived_threads = MagicMock(side_effect=mock_archived_threads)
 
         result = await handlers.list_threads(
-            mock_bot, str(mock_guild.id),
+            mock_bot,
+            str(mock_guild.id),
             channel_id=str(mock_text_channel.id),
             include_archived=True,
         )
@@ -348,9 +300,7 @@ class TestListThreads:
         mock_bot.fetch_channel = AsyncMock(return_value=mock_text_channel)
         mock_text_channel.threads = []
 
-        result = await handlers.list_threads(
-            mock_bot, str(mock_guild.id), channel_id=str(mock_text_channel.id)
-        )
+        result = await handlers.list_threads(mock_bot, str(mock_guild.id), channel_id=str(mock_text_channel.id))
 
         assert result["count"] == 0
         assert result["threads"] == []
@@ -362,9 +312,7 @@ class TestListThreads:
         mock_bot.fetch_channel = AsyncMock(return_value=mock_voice_channel)
 
         with pytest.raises(ValueError, match="not a text channel"):
-            await handlers.list_threads(
-                mock_bot, str(mock_guild.id), channel_id=str(mock_voice_channel.id)
-            )
+            await handlers.list_threads(mock_bot, str(mock_guild.id), channel_id=str(mock_voice_channel.id))
 
     @pytest.mark.asyncio
     async def test_list_threads_invalid_server_id(self, mock_bot):
@@ -376,9 +324,7 @@ class TestListThreads:
     async def test_list_threads_forbidden(self, mock_bot, mock_guild):
         """Test that missing permissions raises PermissionError."""
         mock_bot.fetch_guild = AsyncMock(return_value=mock_guild)
-        mock_guild.fetch_channels = AsyncMock(
-            side_effect=discord.Forbidden(MagicMock(), "Missing permissions")
-        )
+        mock_guild.fetch_channels = AsyncMock(side_effect=discord.Forbidden(MagicMock(), "Missing permissions"))
 
         with pytest.raises(PermissionError, match="Missing permissions"):
             await handlers.list_threads(mock_bot, str(mock_guild.id))

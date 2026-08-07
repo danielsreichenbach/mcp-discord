@@ -1,6 +1,6 @@
 """MCP integration test fixtures.
 
-Provides a ClientSession connected to the production FastMCP server
+Provides a ClientSession connected to the production MCPServer
 with a mock Discord bot injected via lifespan patching.
 """
 
@@ -13,8 +13,7 @@ import anyio
 import discord
 import pytest_asyncio
 from discord.ext import commands
-from mcp.client.session import ClientSession
-from mcp.shared.memory import create_connected_server_and_client_session
+from mcp.client import Client
 
 from discord_mcp.client import DiscordContext
 
@@ -92,13 +91,13 @@ def _make_mock_bot() -> MagicMock:
 
 
 @pytest_asyncio.fixture
-async def mcp_session() -> AsyncGenerator[tuple[ClientSession, MagicMock], None]:
-    """Yield (ClientSession, mock_bot) connected to the production MCP server.
+async def mcp_session() -> AsyncGenerator[tuple[Client, MagicMock], None]:
+    """Yield (Client, mock_bot) connected to the production MCP server.
 
-    The create_connected_server_and_client_session helper uses anyio task groups
-    internally. Teardown can raise RuntimeError when pytest-asyncio runs the
-    generator finalizer in a different task than the one that entered the cancel
-    scope. We suppress that specific error during cleanup since the session has
+    The in-memory transport starts the server in an anyio task group.
+    Teardown can raise RuntimeError when pytest-asyncio runs the generator
+    finalizer in a different task than the one that entered the cancel scope.
+    We suppress that specific error during cleanup since the session has
     already been used successfully by that point.
     """
     mock_bot = _make_mock_bot()
@@ -109,14 +108,10 @@ async def mcp_session() -> AsyncGenerator[tuple[ClientSession, MagicMock], None]
 
     from discord_mcp.server import mcp as production_mcp
 
-    original_lifespan = production_mcp._mcp_server.lifespan
-    production_mcp._mcp_server.lifespan = mock_lifespan
+    original_lifespan = production_mcp._lowlevel_server.lifespan
+    production_mcp._lowlevel_server.lifespan = mock_lifespan
     try:
-        async with create_connected_server_and_client_session(
-            server=production_mcp,
-            raise_exceptions=True,
-        ) as session:
-            await session.initialize()
+        async with Client(production_mcp, raise_exceptions=True) as session:
             yield session, mock_bot
     except (RuntimeError, anyio.get_cancelled_exc_class(), ExceptionGroup):
         # Suppress teardown errors from anyio cancel scope / task group mismatch.
@@ -124,4 +119,4 @@ async def mcp_session() -> AsyncGenerator[tuple[ClientSession, MagicMock], None]
         # task than setup, which conflicts with anyio's cancel scope tracking.
         pass
     finally:
-        production_mcp._mcp_server.lifespan = original_lifespan
+        production_mcp._lowlevel_server.lifespan = original_lifespan

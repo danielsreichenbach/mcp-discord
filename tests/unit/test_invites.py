@@ -21,10 +21,7 @@ class TestCreateInvite:
         mock_bot.fetch_channel = AsyncMock(return_value=mock_text_channel)
         mock_text_channel.create_invite = AsyncMock(return_value=mock_invite)
 
-        result = await handlers.create_invite(
-            mock_bot,
-            str(mock_text_channel.id)
-        )
+        result = await handlers.create_invite(mock_bot, str(mock_text_channel.id))
 
         mock_text_channel.create_invite.assert_called_once()
         assert result["code"] == mock_invite.code
@@ -47,7 +44,7 @@ class TestCreateInvite:
             max_uses=5,
             temporary=True,
             unique=True,
-            reason="Test invite creation"
+            reason="Test invite creation",
         )
 
         assert result["max_age"] == 3600
@@ -64,7 +61,7 @@ class TestCreateInvite:
         result = await handlers.create_invite(
             mock_bot,
             str(mock_text_channel.id),
-            max_age=0  # Never expire
+            max_age=0,  # Never expire
         )
 
         assert result["max_age"] == 0
@@ -78,9 +75,7 @@ class TestCreateInvite:
     @pytest.mark.asyncio
     async def test_create_invite_channel_not_found(self, mock_bot):
         """Test creating invite for a channel that doesn't exist."""
-        mock_bot.fetch_channel = AsyncMock(side_effect=discord.NotFound(
-            MagicMock(), "Channel not found"
-        ))
+        mock_bot.fetch_channel = AsyncMock(side_effect=discord.NotFound(MagicMock(), "Channel not found"))
 
         with pytest.raises(ValueError, match="Channel.*not found"):
             await handlers.create_invite(mock_bot, "999999999999999999")
@@ -89,9 +84,7 @@ class TestCreateInvite:
     async def test_create_invite_forbidden(self, mock_bot, mock_text_channel):
         """Test creating invite when bot lacks permissions."""
         mock_bot.fetch_channel = AsyncMock(return_value=mock_text_channel)
-        mock_text_channel.create_invite = AsyncMock(side_effect=discord.Forbidden(
-            MagicMock(), "Missing permissions"
-        ))
+        mock_text_channel.create_invite = AsyncMock(side_effect=discord.Forbidden(MagicMock(), "Missing permissions"))
 
         with pytest.raises(PermissionError, match="Missing permissions"):
             await handlers.create_invite(mock_bot, str(mock_text_channel.id))
@@ -162,11 +155,7 @@ class TestDeleteInvite:
         mock_bot.fetch_invite = AsyncMock(return_value=mock_invite)
         mock_invite.delete = AsyncMock()
 
-        result = await handlers.delete_invite(
-            mock_bot,
-            mock_invite.code,
-            reason="Test cleanup"
-        )
+        result = await handlers.delete_invite(mock_bot, mock_invite.code, reason="Test cleanup")
 
         mock_invite.delete.assert_called_once()
         assert result["deleted"] is True
@@ -175,9 +164,7 @@ class TestDeleteInvite:
     @pytest.mark.asyncio
     async def test_delete_invite_not_found(self, mock_bot):
         """Test deleting an invite that doesn't exist."""
-        mock_bot.fetch_invite = AsyncMock(side_effect=discord.NotFound(
-            MagicMock(), "Invite not found"
-        ))
+        mock_bot.fetch_invite = AsyncMock(side_effect=discord.NotFound(MagicMock(), "Invite not found"))
 
         with pytest.raises(ValueError, match="Invite.*not found"):
             await handlers.delete_invite(mock_bot, "invalid")
@@ -186,9 +173,7 @@ class TestDeleteInvite:
     async def test_delete_invite_forbidden(self, mock_bot, mock_invite):
         """Test deleting invite when bot lacks permissions."""
         mock_bot.fetch_invite = AsyncMock(return_value=mock_invite)
-        mock_invite.delete = AsyncMock(side_effect=discord.Forbidden(
-            MagicMock(), "Missing permissions"
-        ))
+        mock_invite.delete = AsyncMock(side_effect=discord.Forbidden(MagicMock(), "Missing permissions"))
 
         with pytest.raises(PermissionError, match="Missing permissions"):
             await handlers.delete_invite(mock_bot, mock_invite.code)

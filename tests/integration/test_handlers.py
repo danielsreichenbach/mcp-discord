@@ -11,9 +11,7 @@ class TestSendMessage:
     @pytest.mark.asyncio
     async def test_send_message_success(self, discord_bot, test_channel_id):
         """Test sending a message to a channel."""
-        result = await handlers.send_message(
-            discord_bot, test_channel_id, "Test message from integration test"
-        )
+        result = await handlers.send_message(discord_bot, test_channel_id, "Test message from integration test")
 
         assert "message_id" in result
         assert result["channel_id"] == test_channel_id
@@ -32,15 +30,11 @@ class TestReactions:
     async def test_add_reaction(self, discord_bot, test_channel_id):
         """Test adding a reaction to a message."""
         # First send a message
-        msg_result = await handlers.send_message(
-            discord_bot, test_channel_id, "Reaction test message"
-        )
+        msg_result = await handlers.send_message(discord_bot, test_channel_id, "Reaction test message")
         message_id = msg_result["message_id"]
 
         # Add reaction
-        result = await handlers.add_reaction(
-            discord_bot, test_channel_id, message_id, "👍"
-        )
+        result = await handlers.add_reaction(discord_bot, test_channel_id, message_id, "👍")
 
         assert result["emoji"] == "👍"
         assert result["message_id"] == message_id
@@ -48,30 +42,22 @@ class TestReactions:
     @pytest.mark.asyncio
     async def test_add_multiple_reactions(self, discord_bot, test_channel_id):
         """Test adding multiple reactions to a message."""
-        msg_result = await handlers.send_message(
-            discord_bot, test_channel_id, "Multiple reactions test"
-        )
+        msg_result = await handlers.send_message(discord_bot, test_channel_id, "Multiple reactions test")
         message_id = msg_result["message_id"]
 
-        result = await handlers.add_multiple_reactions(
-            discord_bot, test_channel_id, message_id, ["👍", "❤️"]
-        )
+        result = await handlers.add_multiple_reactions(discord_bot, test_channel_id, message_id, ["👍", "❤️"])
 
         assert result["emojis"] == ["👍", "❤️"]
 
     @pytest.mark.asyncio
     async def test_remove_reaction(self, discord_bot, test_channel_id):
         """Test removing a reaction from a message."""
-        msg_result = await handlers.send_message(
-            discord_bot, test_channel_id, "Remove reaction test"
-        )
+        msg_result = await handlers.send_message(discord_bot, test_channel_id, "Remove reaction test")
         message_id = msg_result["message_id"]
 
         # Add then remove
         await handlers.add_reaction(discord_bot, test_channel_id, message_id, "👍")
-        result = await handlers.remove_reaction(
-            discord_bot, test_channel_id, message_id, "👍"
-        )
+        result = await handlers.remove_reaction(discord_bot, test_channel_id, message_id, "👍")
 
         assert result["emoji"] == "👍"
 
@@ -83,17 +69,13 @@ class TestChannels:
     async def test_create_and_delete_channel(self, discord_bot, test_server_id):
         """Test creating and deleting a text channel."""
         # Create channel
-        create_result = await handlers.create_text_channel(
-            discord_bot, test_server_id, "test-channel-temp"
-        )
+        create_result = await handlers.create_text_channel(discord_bot, test_server_id, "test-channel-temp")
 
         assert "channel_id" in create_result
         assert create_result["channel_name"] == "test-channel-temp"
 
         # Delete channel
-        delete_result = await handlers.delete_channel(
-            discord_bot, create_result["channel_id"], reason="Test cleanup"
-        )
+        delete_result = await handlers.delete_channel(discord_bot, create_result["channel_id"], reason="Test cleanup")
 
         assert delete_result["channel_id"] == create_result["channel_id"]
 
@@ -104,14 +86,10 @@ class TestModeration:
     @pytest.mark.asyncio
     async def test_moderate_message_delete_only(self, discord_bot, test_channel_id):
         """Test deleting a message without timeout."""
-        msg_result = await handlers.send_message(
-            discord_bot, test_channel_id, "Message to moderate"
-        )
+        msg_result = await handlers.send_message(discord_bot, test_channel_id, "Message to moderate")
         message_id = msg_result["message_id"]
 
-        result = await handlers.moderate_message(
-            discord_bot, test_channel_id, message_id, "Test moderation"
-        )
+        result = await handlers.moderate_message(discord_bot, test_channel_id, message_id, "Test moderation")
 
         assert result["deleted"] is True
         assert result["timeout_applied"] is False
@@ -121,19 +99,13 @@ class TestRoleManagement:
     """Tests for role management handlers. Requires TEST_ROLE_ID."""
 
     @pytest.mark.asyncio
-    async def test_add_and_remove_role(
-        self, discord_bot, test_server_id, test_user_id, test_role_id
-    ):
+    async def test_add_and_remove_role(self, discord_bot, test_server_id, test_user_id, test_role_id):
         """Test adding then removing a role from a member."""
-        add_result = await handlers.add_role(
-            discord_bot, test_server_id, test_user_id, test_role_id
-        )
+        add_result = await handlers.add_role(discord_bot, test_server_id, test_user_id, test_role_id)
         assert "role_name" in add_result
         assert "user_name" in add_result
 
-        remove_result = await handlers.remove_role(
-            discord_bot, test_server_id, test_user_id, test_role_id
-        )
+        remove_result = await handlers.remove_role(discord_bot, test_server_id, test_user_id, test_role_id)
         assert "role_name" in remove_result
         assert "user_name" in remove_result
 
@@ -144,15 +116,11 @@ class TestMemberOperations:
     @pytest.mark.asyncio
     async def test_edit_member_nickname(self, discord_bot, test_server_id, test_user_id):
         """Test changing and clearing a member nickname."""
-        result = await handlers.edit_member(
-            discord_bot, test_server_id, test_user_id, nick="IntegrationTest"
-        )
+        result = await handlers.edit_member(discord_bot, test_server_id, test_user_id, nick="IntegrationTest")
         assert "nick" in result["changes"]
 
         # Clear nickname
-        await handlers.edit_member(
-            discord_bot, test_server_id, test_user_id, nick=""
-        )
+        await handlers.edit_member(discord_bot, test_server_id, test_user_id, nick="")
 
 
 class TestResources:
