@@ -10,7 +10,7 @@ import base64
 import os
 import re
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, NotRequired, TypedDict
 
 import discord
 from discord.ext import commands
@@ -649,10 +649,17 @@ async def delete_role(
         raise RuntimeError(f"Discord API error: {e}") from e
 
 
+class RolePosition(TypedDict):
+    """Role id and new position for reorder_roles."""
+
+    id: str
+    position: int
+
+
 async def reorder_roles(
     client: commands.Bot,
     server_id: str,
-    role_positions: list[dict[str, str | int]],
+    role_positions: list[RolePosition],
     reason: str | None = None,
 ) -> dict[str, Any]:
     """Change the position/order of roles.
@@ -913,10 +920,18 @@ async def create_voice_channel(
         raise RuntimeError(f"Discord API error: {e}") from e
 
 
+class ChannelPosition(TypedDict):
+    """Channel id, new position, and optional parent category for reorder_channels."""
+
+    id: str
+    position: int
+    parent_id: NotRequired[str | None]
+
+
 async def reorder_channels(
     client: commands.Bot,
     server_id: str,
-    channel_positions: list[dict[str, int | str | None]],
+    channel_positions: list[ChannelPosition],
     reason: str | None = None,
 ) -> dict[str, Any]:
     """Change channel positions within/across categories.
@@ -942,7 +957,7 @@ async def reorder_channels(
 
         for item in channel_positions:
             chan_id = parse_id(str(item["id"]), "channel_id")
-            position = int(item["position"])  # type: ignore[arg-type]
+            position = int(item["position"])
             parent_id = item.get("parent_id")
 
             channel = await client.fetch_channel(chan_id)

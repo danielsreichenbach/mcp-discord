@@ -11,7 +11,7 @@ from mcp.server.mcpserver import Context, MCPServer
 
 from . import __version__, handlers, resources
 from .client import DiscordContext, configure_windows_stdout_encoding, discord_lifespan
-from .handlers import _SENTINEL
+from .handlers import _SENTINEL, ChannelPosition, RolePosition
 
 configure_windows_stdout_encoding()
 
@@ -239,7 +239,10 @@ async def create_role(
     mentionable: bool = False,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    """Create a new role in the server."""
+    """Create a new role in the server.
+
+    permissions: bitwise permission value (see discord.Permissions); color: RGB
+    integer value (0xRRGGBB)."""
     return await handlers.create_role(
         _get_bot(ctx).bot,
         server_id,
@@ -292,11 +295,11 @@ async def delete_role(
 @mcp.tool()
 async def reorder_roles(
     server_id: str,
-    role_positions: list[dict[str, str | int]],
+    role_positions: list[RolePosition],
     ctx: Context,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    """Change the position/order of roles. Provide list of {id: role_id, position: new_position}."""
+    """Change the position/order of roles. Each item: {id: role_id, position: new_position}."""
     return await handlers.reorder_roles(_get_bot(ctx).bot, server_id, role_positions, reason)
 
 
@@ -313,9 +316,13 @@ async def edit_channel(
     topic: str | None = None,
     nsfw: bool | None = None,
     slowmode_delay: int | None = None,
+    default_auto_archive_duration: int | None = None,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    """Modify channel properties: name, topic, NSFW, slowmode."""
+    """Modify channel properties: name, topic, NSFW, slowmode.
+
+    default_auto_archive_duration: thread auto-archive minutes, one of
+    60, 1440, 4320, 10080."""
     return await handlers.edit_channel(
         _get_bot(ctx).bot,
         channel_id,
@@ -323,6 +330,7 @@ async def edit_channel(
         topic,
         nsfw,
         slowmode_delay,
+        default_auto_archive_duration,
         reason=reason,
     )
 
@@ -349,7 +357,9 @@ async def create_voice_channel(
     user_limit: int | None = None,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    """Create a new voice channel."""
+    """Create a new voice channel.
+
+    bitrate: bits per second (8000-128000); user_limit: max users (0-99, 0 = unlimited)."""
     return await handlers.create_voice_channel(
         _get_bot(ctx).bot,
         server_id,
@@ -364,11 +374,11 @@ async def create_voice_channel(
 @mcp.tool()
 async def reorder_channels(
     server_id: str,
-    channel_positions: list[dict[str, int | str | None]],
+    channel_positions: list[ChannelPosition],
     ctx: Context,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    """Change channel positions. Provide list of {id, position, parent_id}."""
+    """Change channel positions. Each item: {id: channel_id, position: new_position, parent_id: category_id}."""
     return await handlers.reorder_channels(_get_bot(ctx).bot, server_id, channel_positions, reason)
 
 
@@ -485,10 +495,16 @@ async def get_audit_log(
     ctx: Context,
     user_id: str | None = None,
     action_type: int | None = None,
+    before: str | None = None,
     limit: int = 50,
 ) -> dict[str, Any]:
-    """Retrieve server audit logs. Filter by user_id or action_type (see Discord docs for action types)."""
-    return await handlers.get_audit_log(_get_bot(ctx).bot, server_id, user_id, action_type, limit=limit)
+    """Retrieve server audit logs.
+
+    Filter by user_id (moderator) or action_type (audit log event int, e.g.
+    20 kick, 22 ban, 30 role create; full list at
+    discord.com/developers/docs/resources/audit-log). Pass the last entry's
+    id as before to page further."""
+    return await handlers.get_audit_log(_get_bot(ctx).bot, server_id, user_id, action_type, before, limit=limit)
 
 
 # ============================================================================
@@ -555,7 +571,10 @@ async def generate_invite_url(
     preset: str | None = None,
     permissions: int | None = None,
 ) -> dict[str, Any]:
-    """Generate an OAuth2 bot invite URL with permission presets or custom value."""
+    """Generate an OAuth2 bot invite URL.
+
+    preset: read_only, moderate, or full; or pass a raw permissions bitwise
+    value. Defaults to read_only."""
     return await handlers.generate_invite_url(_get_bot(ctx).bot, preset=preset, permissions=permissions)
 
 
