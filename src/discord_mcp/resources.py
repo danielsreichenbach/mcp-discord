@@ -7,11 +7,11 @@ Returns dicts/lists for easy serialization.
 
 from typing import Any
 
+import discord
 from discord.ext import commands
 
-import discord
-
 from .client import parse_id, require_messageable_channel
+from .handlers import PERMISSION_PRESETS, _describe_permissions
 
 
 async def list_servers(client: commands.Bot) -> list[dict[str, Any]]:
@@ -175,4 +175,65 @@ async def get_user_info(client: commands.Bot, user_id: str) -> dict[str, Any]:
         "discriminator": user.discriminator,
         "bot": user.bot,
         "created_at": user.created_at.isoformat(),
+    }
+
+
+async def list_bot_guilds(client: commands.Bot) -> list[dict[str, Any]]:
+    """List guilds the bot is in with read-access status per guild.
+
+    Uses ``guild.me.guild_permissions`` to check whether the bot has
+    the View Channels and Read Message History permissions (the
+    ``read_only`` preset).
+    """
+    read_only_value = PERMISSION_PRESETS["read_only"]
+    results: list[dict[str, Any]] = []
+    for guild in client.guilds:
+        me = guild.me
+        perms = me.guild_permissions if me is not None else discord.Permissions.none()
+        has_read = (perms.value & read_only_value) == read_only_value
+        results.append(
+            {
+                "id": str(guild.id),
+                "name": guild.name,
+                "has_read_access": has_read,
+                "permissions_value": perms.value,
+            }
+        )
+    return results
+
+
+async def audit_bot_permissions(client: commands.Bot, server_id: str) -> dict[str, Any]:
+    """Audit bot permissions in a guild against each preset profile.
+
+    Reports the bot's effective permissions and which preset profiles
+    are fully satisfied. For unsatisfied presets, lists missing permissions.
+    """
+    guild = await client.fetch_guild(parse_id(server_id, "server_id"))
+    me = guild.me
+    if me is None:
+        raise ValueError(f"Bot member not found in guild {server_id}")
+    perms = me.guild_permissions
+    is_admin = perms.administrator
+
+    preset_results: dict[str, Any] = {}
+    for preset_name, preset_value in PERMISSION_PRESETS.items():
+        if is_admin:
+            satisfied = True
+            missing: list[str] = []
+        else:
+            missing_bits = preset_value & ~perms.value
+            satisfied = missing_bits == 0
+            missing = _describe_permissions(missing_bits)
+        preset_results[preset_name] = {
+            "satisfied": satisfied,
+            "missing": missing,
+        }
+
+    return {
+        "guild_id": str(guild.id),
+        "guild_name": guild.name,
+        "permissions_value": perms.value,
+        "permissions": _describe_permissions(perms.value),
+        "is_admin": is_admin,
+        "presets": preset_results,
     }

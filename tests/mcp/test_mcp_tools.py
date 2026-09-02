@@ -66,6 +66,9 @@ class TestToolDiscovery:
             "list_roles",
             "read_messages",
             "get_user_info",
+            "generate_invite_url",
+            "list_bot_guilds",
+            "audit_bot_permissions",
         }
         assert expected.issubset(tool_names), f"Missing tools: {expected - tool_names}"
 
@@ -73,8 +76,8 @@ class TestToolDiscovery:
     async def test_tool_count(self, mcp_session):
         session, _ = mcp_session
         result = await session.list_tools()
-        # At least 45 tools registered
-        assert len(result.tools) >= 45
+        # At least 48 tools registered
+        assert len(result.tools) >= 48
 
 
 class TestResourceDiscovery:
@@ -84,7 +87,7 @@ class TestResourceDiscovery:
     async def test_list_resources(self, mcp_session):
         session, _ = mcp_session
         result = await session.list_resource_templates()
-        uris = {str(r.uriTemplate) for r in result.resourceTemplates}
+        uris = {str(r.uri_template) for r in result.resource_templates}
 
         expected_patterns = {
             "discord://servers/{server_id}",
@@ -94,13 +97,6 @@ class TestResourceDiscovery:
             "discord://channels/{channel_id}/messages",
         }
         assert expected_patterns.issubset(uris), f"Missing: {expected_patterns - uris}"
-
-    @pytest.mark.asyncio
-    async def test_static_resources(self, mcp_session):
-        session, _ = mcp_session
-        result = await session.list_resources()
-        uris = {str(r.uri) for r in result.resources}
-        assert "discord://servers" in uris
 
 
 class TestToolExecution:
@@ -120,7 +116,7 @@ class TestToolExecution:
             {"channel_id": "555555555555555555", "content": "Hello from MCP"},
         )
 
-        assert not result.isError
+        assert not result.is_error
         data = json.loads(result.content[0].text)
         assert "message_id" in data
 
@@ -143,7 +139,7 @@ class TestToolExecution:
             },
         )
 
-        assert not result.isError
+        assert not result.is_error
         data = json.loads(result.content[0].text)
         assert data["kicked"] is True
         assert data["user_name"] == "TestUser"
@@ -163,7 +159,7 @@ class TestToolExecution:
             {"server_id": "987654321098765432", "name": "NewRole"},
         )
 
-        assert not result.isError
+        assert not result.is_error
         data = json.loads(result.content[0].text)
         assert data["role_name"] == "NewRole"
 
@@ -173,7 +169,7 @@ class TestToolExecution:
 
         result = await session.call_tool("list_servers", {})
 
-        assert not result.isError
+        assert not result.is_error
         assert len(result.content) >= 1
         data = json.loads(result.content[0].text)
         assert data["name"] == "Test Server"
@@ -184,7 +180,7 @@ class TestToolExecution:
 
         result = await session.call_tool("get_user_info", {"user_id": "222222222222222222"})
 
-        assert not result.isError
+        assert not result.is_error
         data = json.loads(result.content[0].text)
         assert data["name"] == "TestUser"
 
@@ -219,7 +215,7 @@ class TestToolExecution:
             },
         )
 
-        assert not result.isError
+        assert not result.is_error
         assert len(result.content) >= 1
         data = json.loads(result.content[0].text)
         assert data["content"] == "Historical message"
@@ -250,10 +246,58 @@ class TestToolExecution:
             {"server_id": "987654321098765432"},
         )
 
-        assert not result.isError
+        assert not result.is_error
         data = json.loads(result.content[0].text)
         assert data["count"] >= 1
         assert data["threads"][0]["name"] == "help-thread"
+
+    @pytest.mark.asyncio
+    async def test_generate_invite_url(self, mcp_session):
+        session, _ = mcp_session
+
+        result = await session.call_tool("generate_invite_url", {})
+
+        assert not result.is_error
+        data = json.loads(result.content[0].text)
+        assert "url" in data
+        assert data["preset"] == "read_only"
+        assert "discord.com/oauth2/authorize" in data["url"]
+
+    @pytest.mark.asyncio
+    async def test_generate_invite_url_with_preset(self, mcp_session):
+        session, _ = mcp_session
+
+        result = await session.call_tool("generate_invite_url", {"preset": "moderate"})
+
+        assert not result.is_error
+        data = json.loads(result.content[0].text)
+        assert data["preset"] == "moderate"
+
+    @pytest.mark.asyncio
+    async def test_list_bot_guilds(self, mcp_session):
+        session, _ = mcp_session
+
+        result = await session.call_tool("list_bot_guilds", {})
+
+        assert not result.is_error
+        data = json.loads(result.content[0].text)
+        assert data["id"] == "987654321098765432"
+        assert data["name"] == "Test Server"
+        assert "has_read_access" in data
+
+    @pytest.mark.asyncio
+    async def test_audit_bot_permissions(self, mcp_session):
+        session, _ = mcp_session
+
+        result = await session.call_tool(
+            "audit_bot_permissions",
+            {"server_id": "987654321098765432"},
+        )
+
+        assert not result.is_error
+        data = json.loads(result.content[0].text)
+        assert "presets" in data
+        assert "read_only" in data["presets"]
 
 
 class TestErrorHandling:
@@ -268,7 +312,7 @@ class TestErrorHandling:
             {"channel_id": "invalid", "content": "test"},
         )
 
-        assert result.isError
+        assert result.is_error
         assert "Invalid channel_id" in result.content[0].text
 
     @pytest.mark.asyncio
@@ -289,7 +333,7 @@ class TestErrorHandling:
             },
         )
 
-        assert result.isError
+        assert result.is_error
 
     @pytest.mark.asyncio
     async def test_missing_required_arg_returns_error(self, mcp_session):
@@ -300,4 +344,4 @@ class TestErrorHandling:
             {"channel_id": "555555555555555555"},
         )
 
-        assert result.isError
+        assert result.is_error

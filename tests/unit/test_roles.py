@@ -40,7 +40,7 @@ class TestCreateRole:
             color=0x5865F2,
             hoist=False,
             mentionable=True,
-            reason="Test role creation"
+            reason="Test role creation",
         )
 
         # Verify
@@ -66,11 +66,7 @@ class TestCreateRole:
         mock_role.permissions.value = 0
         mock_guild.create_role = AsyncMock(return_value=mock_role)
 
-        result = await handlers.create_role(
-            mock_bot,
-            str(mock_guild.id),
-            name="Simple Role"
-        )
+        result = await handlers.create_role(mock_bot, str(mock_guild.id), name="Simple Role")
 
         assert result["role_id"] == str(mock_role.id)
         assert result["role_name"] == "Simple Role"
@@ -84,9 +80,7 @@ class TestCreateRole:
     @pytest.mark.asyncio
     async def test_create_role_server_not_found(self, mock_bot):
         """Test create role when server doesn't exist."""
-        mock_bot.fetch_guild = AsyncMock(side_effect=discord.NotFound(
-            MagicMock(), "Guild not found"
-        ))
+        mock_bot.fetch_guild = AsyncMock(side_effect=discord.NotFound(MagicMock(), "Guild not found"))
 
         with pytest.raises(ValueError, match="Server.*not found"):
             await handlers.create_role(mock_bot, "999999999999999999", name="Test")
@@ -95,14 +89,10 @@ class TestCreateRole:
     async def test_create_role_forbidden(self, mock_bot, mock_guild):
         """Test create role when bot lacks permissions."""
         mock_bot.fetch_guild = AsyncMock(return_value=mock_guild)
-        mock_guild.create_role = AsyncMock(side_effect=discord.Forbidden(
-            MagicMock(), "Missing permissions"
-        ))
+        mock_guild.create_role = AsyncMock(side_effect=discord.Forbidden(MagicMock(), "Missing permissions"))
 
         with pytest.raises(PermissionError, match="Missing permissions"):
-            await handlers.create_role(
-                mock_bot, str(mock_guild.id), name="Test Role"
-            )
+            await handlers.create_role(mock_bot, str(mock_guild.id), name="Test Role")
 
 
 class TestEditRole:
@@ -116,12 +106,7 @@ class TestEditRole:
         mock_role.edit = AsyncMock()
         mock_role.name = "Updated Name"
 
-        result = await handlers.edit_role(
-            mock_bot,
-            str(mock_guild.id),
-            str(mock_role.id),
-            name="Updated Name"
-        )
+        result = await handlers.edit_role(mock_bot, str(mock_guild.id), str(mock_role.id), name="Updated Name")
 
         mock_role.edit.assert_called_once()
         assert "name" in result["changes"]
@@ -136,12 +121,7 @@ class TestEditRole:
         mock_role.color = MagicMock()
         mock_role.color.value = 0xFF0000
 
-        result = await handlers.edit_role(
-            mock_bot,
-            str(mock_guild.id),
-            str(mock_role.id),
-            color=0xFF0000
-        )
+        result = await handlers.edit_role(mock_bot, str(mock_guild.id), str(mock_role.id), color=0xFF0000)
 
         assert "color" in result["changes"]
 
@@ -156,7 +136,7 @@ class TestEditRole:
             mock_bot,
             str(mock_guild.id),
             str(mock_role.id),
-            permissions=8  # Administrator
+            permissions=8,  # Administrator
         )
 
         assert "permissions" in result["changes"]
@@ -175,7 +155,7 @@ class TestEditRole:
             name="New Name",
             color=0x00FF00,
             mentionable=True,
-            hoist=True
+            hoist=True,
         )
 
         assert "name" in result["changes"]
@@ -190,12 +170,7 @@ class TestEditRole:
         mock_guild.fetch_roles = AsyncMock(return_value=[])
 
         with pytest.raises(ValueError, match="Role.*not found"):
-            await handlers.edit_role(
-                mock_bot,
-                str(mock_guild.id),
-                "999999999999999999",
-                name="Test"
-            )
+            await handlers.edit_role(mock_bot, str(mock_guild.id), "999999999999999999", name="Test")
 
 
 class TestDeleteRole:
@@ -208,12 +183,7 @@ class TestDeleteRole:
         mock_guild.fetch_roles = AsyncMock(return_value=[mock_role])
         mock_role.delete = AsyncMock()
 
-        result = await handlers.delete_role(
-            mock_bot,
-            str(mock_guild.id),
-            str(mock_role.id),
-            reason="Test cleanup"
-        )
+        result = await handlers.delete_role(mock_bot, str(mock_guild.id), str(mock_role.id), reason="Test cleanup")
 
         mock_role.delete.assert_called_once()
         assert result["deleted"] is True
@@ -225,14 +195,10 @@ class TestDeleteRole:
         """Test deleting a role when bot lacks permissions."""
         mock_bot.fetch_guild = AsyncMock(return_value=mock_guild)
         mock_guild.fetch_roles = AsyncMock(return_value=[mock_role])
-        mock_role.delete = AsyncMock(side_effect=discord.Forbidden(
-            MagicMock(), "Cannot delete managed role"
-        ))
+        mock_role.delete = AsyncMock(side_effect=discord.Forbidden(MagicMock(), "Cannot delete managed role"))
 
         with pytest.raises(PermissionError, match="Missing permissions"):
-            await handlers.delete_role(
-                mock_bot, str(mock_guild.id), str(mock_role.id)
-            )
+            await handlers.delete_role(mock_bot, str(mock_guild.id), str(mock_role.id))
 
 
 class TestReorderRoles:
@@ -259,11 +225,8 @@ class TestReorderRoles:
         result = await handlers.reorder_roles(
             mock_bot,
             str(mock_guild.id),
-            [
-                {"id": str(role1.id), "position": 2},
-                {"id": str(role2.id), "position": 1}
-            ],
-            reason="Reorder test"
+            [{"id": str(role1.id), "position": 2}, {"id": str(role2.id), "position": 1}],
+            reason="Reorder test",
         )
 
         assert result["reordered"] is True

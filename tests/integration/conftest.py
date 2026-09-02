@@ -5,6 +5,7 @@ Set TEST_SERVER_ID and TEST_CHANNEL_ID for tests that need specific targets.
 """
 
 import os
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
@@ -40,7 +41,7 @@ def skip_if_no_token() -> None:
 
 
 @pytest_asyncio.fixture
-async def discord_bot() -> commands.Bot:
+async def discord_bot() -> AsyncGenerator[commands.Bot, None]:
     """Create and start a Discord bot for testing.
 
     Yields a connected bot instance. Automatically closes on cleanup.

@@ -23,9 +23,7 @@ class TestSendMessage:
         sent_msg.id = 111222333
         mock_text_channel.send = AsyncMock(return_value=sent_msg)
 
-        result = await handlers.send_message(
-            mock_bot, str(mock_text_channel.id), "Hello"
-        )
+        result = await handlers.send_message(mock_bot, str(mock_text_channel.id), "Hello")
 
         mock_text_channel.send.assert_called_once_with("Hello")
         assert result["message_id"] == str(sent_msg.id)
@@ -41,9 +39,7 @@ class TestSendMessage:
         mock_bot.fetch_channel = AsyncMock(return_value=mock_voice_channel)
 
         with pytest.raises(ValueError, match="not a text channel"):
-            await handlers.send_message(
-                mock_bot, str(mock_voice_channel.id), "Hello"
-            )
+            await handlers.send_message(mock_bot, str(mock_voice_channel.id), "Hello")
 
 
 class TestAddRole:
@@ -62,9 +58,7 @@ class TestAddRole:
             str(mock_role.id),
         )
 
-        mock_member.add_roles.assert_called_once_with(
-            mock_role, reason="Role added via MCP"
-        )
+        mock_member.add_roles.assert_called_once_with(mock_role, reason="Role added via MCP")
         assert result["role_name"] == mock_role.name
         assert result["user_name"] == mock_member.name
 
@@ -77,9 +71,7 @@ class TestAddRole:
     async def test_invalid_user_id(self, mock_bot, mock_guild):
         mock_bot.fetch_guild = AsyncMock(return_value=mock_guild)
         with pytest.raises(ValueError, match="Invalid user_id"):
-            await handlers.add_role(
-                mock_bot, str(mock_guild.id), "bad", "456"
-            )
+            await handlers.add_role(mock_bot, str(mock_guild.id), "bad", "456")
 
     @pytest.mark.asyncio
     async def test_role_not_found(self, mock_bot, mock_guild, mock_member):
@@ -114,9 +106,7 @@ class TestRemoveRole:
             str(mock_role.id),
         )
 
-        mock_member.remove_roles.assert_called_once_with(
-            mock_role, reason="Role removed via MCP"
-        )
+        mock_member.remove_roles.assert_called_once_with(mock_role, reason="Role removed via MCP")
         assert result["role_name"] == mock_role.name
         assert result["user_name"] == mock_member.name
 
@@ -137,9 +127,7 @@ class TestCreateTextChannel:
         created.id = 111
         mock_guild.create_text_channel = AsyncMock(return_value=created)
 
-        result = await handlers.create_text_channel(
-            mock_bot, str(mock_guild.id), "new-channel"
-        )
+        result = await handlers.create_text_channel(mock_bot, str(mock_guild.id), "new-channel")
 
         assert result["channel_name"] == "new-channel"
         assert result["channel_id"] == "111"
@@ -172,9 +160,7 @@ class TestCreateTextChannel:
         created.id = 111
         mock_guild.create_text_channel = AsyncMock(return_value=created)
 
-        await handlers.create_text_channel(
-            mock_bot, str(mock_guild.id), "new-channel", topic="My topic"
-        )
+        await handlers.create_text_channel(mock_bot, str(mock_guild.id), "new-channel", topic="My topic")
 
         call_kwargs = mock_guild.create_text_channel.call_args[1]
         assert call_kwargs["topic"] == "My topic"
@@ -200,9 +186,7 @@ class TestDeleteChannel:
     async def test_success(self, mock_bot, mock_text_channel):
         mock_bot.fetch_channel = AsyncMock(return_value=mock_text_channel)
 
-        result = await handlers.delete_channel(
-            mock_bot, str(mock_text_channel.id)
-        )
+        result = await handlers.delete_channel(mock_bot, str(mock_text_channel.id))
 
         mock_text_channel.delete.assert_called_once()
         assert result["channel_id"] == str(mock_text_channel.id)
@@ -219,9 +203,7 @@ class TestDeleteChannel:
     async def test_reason_passed_through(self, mock_bot, mock_text_channel):
         mock_bot.fetch_channel = AsyncMock(return_value=mock_text_channel)
 
-        await handlers.delete_channel(
-            mock_bot, str(mock_text_channel.id), reason="Cleanup"
-        )
+        await handlers.delete_channel(mock_bot, str(mock_text_channel.id), reason="Cleanup")
 
         mock_text_channel.delete.assert_called_once_with(reason="Cleanup")
 
@@ -304,9 +286,7 @@ class TestRemoveReaction:
         assert result["emoji"] == "👍"
 
     @pytest.mark.asyncio
-    async def test_client_user_none_raises(
-        self, mock_bot, mock_text_channel, mock_message
-    ):
+    async def test_client_user_none_raises(self, mock_bot, mock_text_channel, mock_message):
         mock_bot.user = None
         mock_bot.fetch_channel = AsyncMock(return_value=mock_text_channel)
         mock_text_channel.fetch_message = AsyncMock(return_value=mock_message)
@@ -362,14 +342,10 @@ class TestModerateMessage:
         assert result["timeout_minutes"] == 10
 
     @pytest.mark.asyncio
-    async def test_member_not_found_raises(
-        self, mock_bot, mock_text_channel, mock_message
-    ):
+    async def test_member_not_found_raises(self, mock_bot, mock_text_channel, mock_message):
         mock_bot.fetch_channel = AsyncMock(return_value=mock_text_channel)
         mock_text_channel.fetch_message = AsyncMock(return_value=mock_message)
-        mock_text_channel.guild.fetch_member = AsyncMock(
-            side_effect=discord.NotFound(MagicMock(), "Not found")
-        )
+        mock_text_channel.guild.fetch_member = AsyncMock(side_effect=discord.NotFound(MagicMock(), "Not found"))
 
         with pytest.raises(ValueError, match="member not found"):
             await handlers.moderate_message(
@@ -381,9 +357,7 @@ class TestModerateMessage:
             )
 
     @pytest.mark.asyncio
-    async def test_timeout_zero_treated_as_no_timeout(
-        self, mock_bot, mock_text_channel, mock_message
-    ):
+    async def test_timeout_zero_treated_as_no_timeout(self, mock_bot, mock_text_channel, mock_message):
         mock_bot.fetch_channel = AsyncMock(return_value=mock_text_channel)
         mock_text_channel.fetch_message = AsyncMock(return_value=mock_message)
 

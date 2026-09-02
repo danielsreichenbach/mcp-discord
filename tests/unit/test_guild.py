@@ -82,9 +82,7 @@ class TestGetAuditLog:
     async def test_get_audit_log_forbidden(self, mock_bot, mock_guild):
         """Test audit log when bot lacks permissions."""
         mock_bot.fetch_guild = AsyncMock(return_value=mock_guild)
-        mock_guild.audit_logs = MagicMock(side_effect=discord.Forbidden(
-            MagicMock(), "Missing permissions"
-        ))
+        mock_guild.audit_logs = MagicMock(side_effect=discord.Forbidden(MagicMock(), "Missing permissions"))
 
         with pytest.raises(PermissionError, match="Missing permissions"):
             await handlers.get_audit_log(mock_bot, str(mock_guild.id))
@@ -148,12 +146,7 @@ class TestCreateEmoji:
             "RU5ErkJggg=="
         )
 
-        result = await handlers.create_emoji(
-            mock_bot,
-            str(mock_guild.id),
-            name="test_emoji",
-            image=image_data
-        )
+        result = await handlers.create_emoji(mock_bot, str(mock_guild.id), name="test_emoji", image=image_data)
 
         mock_guild.create_custom_emoji.assert_called_once()
         assert result["emoji_id"] == str(mock_emoji.id)
@@ -173,11 +166,7 @@ class TestCreateEmoji:
         )
 
         await handlers.create_emoji(
-            mock_bot,
-            str(mock_guild.id),
-            name="restricted_emoji",
-            image=image_data,
-            roles=[str(mock_role.id)]
+            mock_bot, str(mock_guild.id), name="restricted_emoji", image=image_data, roles=[str(mock_role.id)]
         )
 
     @pytest.mark.asyncio
@@ -190,7 +179,7 @@ class TestCreateEmoji:
                 mock_bot,
                 str(mock_guild.id),
                 name="a",  # Too short
-                image="data:image/png;base64,xxx"
+                image="data:image/png;base64,xxx",
             )
 
 
@@ -204,12 +193,7 @@ class TestDeleteEmoji:
         mock_guild.fetch_emojis = AsyncMock(return_value=[mock_emoji])
         mock_emoji.delete = AsyncMock()
 
-        result = await handlers.delete_emoji(
-            mock_bot,
-            str(mock_guild.id),
-            str(mock_emoji.id),
-            reason="Test cleanup"
-        )
+        result = await handlers.delete_emoji(mock_bot, str(mock_guild.id), str(mock_emoji.id), reason="Test cleanup")
 
         mock_emoji.delete.assert_called_once()
         assert result["deleted"] is True
@@ -222,22 +206,14 @@ class TestDeleteEmoji:
         mock_guild.fetch_emojis = AsyncMock(return_value=[])
 
         with pytest.raises(ValueError, match="Emoji.*not found"):
-            await handlers.delete_emoji(
-                mock_bot,
-                str(mock_guild.id),
-                "999999999999999999"
-            )
+            await handlers.delete_emoji(mock_bot, str(mock_guild.id), "999999999999999999")
 
     @pytest.mark.asyncio
     async def test_delete_emoji_forbidden(self, mock_bot, mock_guild, mock_emoji):
         """Test deleting emoji when bot lacks permissions."""
         mock_bot.fetch_guild = AsyncMock(return_value=mock_guild)
         mock_guild.fetch_emojis = AsyncMock(return_value=[mock_emoji])
-        mock_emoji.delete = AsyncMock(side_effect=discord.Forbidden(
-            MagicMock(), "Cannot delete managed emoji"
-        ))
+        mock_emoji.delete = AsyncMock(side_effect=discord.Forbidden(MagicMock(), "Cannot delete managed emoji"))
 
         with pytest.raises(PermissionError, match="Missing permissions"):
-            await handlers.delete_emoji(
-                mock_bot, str(mock_guild.id), str(mock_emoji.id)
-            )
+            await handlers.delete_emoji(mock_bot, str(mock_guild.id), str(mock_emoji.id))

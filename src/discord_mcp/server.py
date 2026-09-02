@@ -5,13 +5,13 @@ from __future__ import annotations
 import datetime as dt
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 
-from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.mcpserver import Context, MCPServer
 
-from . import handlers, resources
+from . import __version__, handlers, resources
 from .client import DiscordContext, configure_windows_stdout_encoding, discord_lifespan
-from .handlers import _SENTINEL
+from .handlers import _SENTINEL, ChannelPosition, RolePosition
 
 configure_windows_stdout_encoding()
 
@@ -19,54 +19,44 @@ logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("discord-mcp")
 logger.setLevel(logging.INFO)
 
-mcp = FastMCP("discord-server", lifespan=discord_lifespan)
+mcp = MCPServer[DiscordContext]("discord-server", lifespan=discord_lifespan, version=__version__)
 
 
 def _get_bot(ctx: Context) -> DiscordContext:
-    return ctx.request_context.lifespan_context
+    # The SDK's Context TypeVar defaults LifespanContextT to dict[str, Any];
+    # this server's lifespan yields DiscordContext.
+    return cast(DiscordContext, ctx.request_context.lifespan_context)
 
 
 # Resources (read-only data)
 
 
-@mcp.resource("discord://servers")
-async def list_servers_resource() -> str:
-    ctx = mcp.get_context()
-    servers = await resources.list_servers(_get_bot(ctx).bot)
-    return json.dumps(servers)
-
-
 @mcp.resource("discord://servers/{server_id}")
-async def get_server_info_resource(server_id: str) -> str:
-    ctx = mcp.get_context()
+async def get_server_info_resource(server_id: str, ctx: Context) -> str:
     info = await resources.get_server_info(_get_bot(ctx).bot, server_id)
     return json.dumps(info)
 
 
 @mcp.resource("discord://servers/{server_id}/channels")
-async def get_channels_resource(server_id: str) -> str:
-    ctx = mcp.get_context()
+async def get_channels_resource(server_id: str, ctx: Context) -> str:
     channels = await resources.get_channels(_get_bot(ctx).bot, server_id)
     return json.dumps(channels)
 
 
 @mcp.resource("discord://servers/{server_id}/members")
-async def list_members_resource(server_id: str) -> str:
-    ctx = mcp.get_context()
+async def list_members_resource(server_id: str, ctx: Context) -> str:
     members = await resources.list_members(_get_bot(ctx).bot, server_id)
     return json.dumps(members)
 
 
 @mcp.resource("discord://servers/{server_id}/roles")
-async def list_roles_resource(server_id: str) -> str:
-    ctx = mcp.get_context()
+async def list_roles_resource(server_id: str, ctx: Context) -> str:
     roles = await resources.list_roles(_get_bot(ctx).bot, server_id)
     return json.dumps(roles)
 
 
 @mcp.resource("discord://channels/{channel_id}/messages")
-async def read_messages_resource(channel_id: str) -> str:
-    ctx = mcp.get_context()
+async def read_messages_resource(channel_id: str, ctx: Context) -> str:
     messages = await resources.read_messages(_get_bot(ctx).bot, channel_id)
     return json.dumps(messages)
 
@@ -77,21 +67,18 @@ async def read_messages_resource(channel_id: str) -> str:
 @mcp.tool()
 async def send_message(channel_id: str, content: str, ctx: Context) -> dict[str, Any]:
     """Send a message to a specific channel."""
-    await ctx.info(f"Sending message to channel {channel_id}")
     return await handlers.send_message(_get_bot(ctx).bot, channel_id, content)
 
 
 @mcp.tool()
 async def add_role(server_id: str, user_id: str, role_id: str, ctx: Context) -> dict[str, Any]:
     """Add a role to a user in a server."""
-    await ctx.info(f"Adding role {role_id} to user {user_id}")
     return await handlers.add_role(_get_bot(ctx).bot, server_id, user_id, role_id)
 
 
 @mcp.tool()
 async def remove_role(server_id: str, user_id: str, role_id: str, ctx: Context) -> dict[str, Any]:
     """Remove a role from a user in a server."""
-    await ctx.info(f"Removing role {role_id} from user {user_id}")
     return await handlers.remove_role(_get_bot(ctx).bot, server_id, user_id, role_id)
 
 
@@ -104,14 +91,12 @@ async def create_text_channel(
     topic: str | None = None,
 ) -> dict[str, Any]:
     """Create a new text channel in a server."""
-    await ctx.info(f"Creating text channel '{name}' in server {server_id}")
     return await handlers.create_text_channel(_get_bot(ctx).bot, server_id, name, category_id, topic)
 
 
 @mcp.tool()
 async def delete_channel(channel_id: str, ctx: Context, reason: str | None = None) -> dict[str, Any]:
     """Delete a channel."""
-    await ctx.info(f"Deleting channel {channel_id}")
     return await handlers.delete_channel(_get_bot(ctx).bot, channel_id, reason)
 
 
@@ -142,7 +127,6 @@ async def moderate_message(
     timeout_minutes: int | None = None,
 ) -> dict[str, Any]:
     """Delete a message and optionally timeout the author."""
-    await ctx.info(f"Moderating message {message_id} in channel {channel_id}")
     return await handlers.moderate_message(_get_bot(ctx).bot, channel_id, message_id, reason, timeout_minutes)
 
 
@@ -159,7 +143,6 @@ async def kick_member(
     reason: str | None = None,
 ) -> dict[str, Any]:
     """Kick a member from the server."""
-    await ctx.info(f"Kicking user {user_id} from server {server_id}")
     return await handlers.kick_member(_get_bot(ctx).bot, server_id, user_id, reason)
 
 
@@ -172,7 +155,6 @@ async def ban_member(
     delete_message_days: int = 0,
 ) -> dict[str, Any]:
     """Ban a user from the server. Optionally delete their recent messages."""
-    await ctx.info(f"Banning user {user_id} from server {server_id}")
     return await handlers.ban_member(
         _get_bot(ctx).bot,
         server_id,
@@ -190,7 +172,6 @@ async def unban_member(
     reason: str | None = None,
 ) -> dict[str, Any]:
     """Remove a ban for a user."""
-    await ctx.info(f"Unbanning user {user_id} from server {server_id}")
     return await handlers.unban_member(_get_bot(ctx).bot, server_id, user_id, reason)
 
 
@@ -211,7 +192,10 @@ async def edit_member(
     deafen: bool | None = None,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    """Modify member properties: nickname, timeout, voice mute/deafen."""
+    """Modify member properties: nickname, timeout, voice mute/deafen.
+
+    Omit a field (or pass null) to leave it unchanged. Pass an empty string
+    for nick to clear the nickname; use remove_timeout to clear a timeout."""
     timeout_until: str | None | object = _SENTINEL
     if timeout_minutes is not None:
         timeout_until = (dt.datetime.now(dt.UTC) + dt.timedelta(minutes=timeout_minutes)).isoformat()
@@ -236,7 +220,6 @@ async def remove_timeout(
     reason: str | None = None,
 ) -> dict[str, Any]:
     """Remove a timeout from a member."""
-    await ctx.info(f"Removing timeout from user {user_id}")
     return await handlers.remove_timeout(_get_bot(ctx).bot, server_id, user_id, reason)
 
 
@@ -256,8 +239,10 @@ async def create_role(
     mentionable: bool = False,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    """Create a new role in the server."""
-    await ctx.info(f"Creating role '{name}' in server {server_id}")
+    """Create a new role in the server.
+
+    permissions: bitwise permission value (see discord.Permissions); color: RGB
+    integer value (0xRRGGBB)."""
     return await handlers.create_role(
         _get_bot(ctx).bot,
         server_id,
@@ -304,18 +289,17 @@ async def delete_role(
     reason: str | None = None,
 ) -> dict[str, Any]:
     """Delete a role from the server."""
-    await ctx.info(f"Deleting role {role_id} from server {server_id}")
     return await handlers.delete_role(_get_bot(ctx).bot, server_id, role_id, reason)
 
 
 @mcp.tool()
 async def reorder_roles(
     server_id: str,
-    role_positions: list[dict[str, int]],
+    role_positions: list[RolePosition],
     ctx: Context,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    """Change the position/order of roles. Provide list of {id: role_id, position: new_position}."""
+    """Change the position/order of roles. Each item: {id: role_id, position: new_position}."""
     return await handlers.reorder_roles(_get_bot(ctx).bot, server_id, role_positions, reason)
 
 
@@ -332,9 +316,13 @@ async def edit_channel(
     topic: str | None = None,
     nsfw: bool | None = None,
     slowmode_delay: int | None = None,
+    default_auto_archive_duration: int | None = None,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    """Modify channel properties: name, topic, NSFW, slowmode."""
+    """Modify channel properties: name, topic, NSFW, slowmode.
+
+    default_auto_archive_duration: thread auto-archive minutes, one of
+    60, 1440, 4320, 10080."""
     return await handlers.edit_channel(
         _get_bot(ctx).bot,
         channel_id,
@@ -342,6 +330,7 @@ async def edit_channel(
         topic,
         nsfw,
         slowmode_delay,
+        default_auto_archive_duration,
         reason=reason,
     )
 
@@ -355,7 +344,6 @@ async def create_category(
     reason: str | None = None,
 ) -> dict[str, Any]:
     """Create a new channel category."""
-    await ctx.info(f"Creating category '{name}' in server {server_id}")
     return await handlers.create_category(_get_bot(ctx).bot, server_id, name, position, reason)
 
 
@@ -369,8 +357,9 @@ async def create_voice_channel(
     user_limit: int | None = None,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    """Create a new voice channel."""
-    await ctx.info(f"Creating voice channel '{name}' in server {server_id}")
+    """Create a new voice channel.
+
+    bitrate: bits per second (8000-128000); user_limit: max users (0-99, 0 = unlimited)."""
     return await handlers.create_voice_channel(
         _get_bot(ctx).bot,
         server_id,
@@ -385,11 +374,11 @@ async def create_voice_channel(
 @mcp.tool()
 async def reorder_channels(
     server_id: str,
-    channel_positions: list[dict[str, int | str | None]],
+    channel_positions: list[ChannelPosition],
     ctx: Context,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    """Change channel positions. Provide list of {id, position, parent_id}."""
+    """Change channel positions. Each item: {id: channel_id, position: new_position, parent_id: category_id}."""
     return await handlers.reorder_channels(_get_bot(ctx).bot, server_id, channel_positions, reason)
 
 
@@ -409,7 +398,6 @@ async def create_invite(
     reason: str | None = None,
 ) -> dict[str, Any]:
     """Create a channel invite. max_age in seconds (0=never), max_uses (0=unlimited)."""
-    await ctx.info(f"Creating invite for channel {channel_id}")
     return await handlers.create_invite(_get_bot(ctx).bot, channel_id, max_age, max_uses, temporary, unique, reason)
 
 
@@ -428,7 +416,6 @@ async def list_channel_invites(channel_id: str, ctx: Context) -> list[dict[str, 
 @mcp.tool()
 async def delete_invite(invite_code: str, ctx: Context, reason: str | None = None) -> dict[str, Any]:
     """Delete/revoke an invite by its code."""
-    await ctx.info(f"Deleting invite {invite_code}")
     return await handlers.delete_invite(_get_bot(ctx).bot, invite_code, reason)
 
 
@@ -455,7 +442,6 @@ async def delete_message(
     ctx: Context,
 ) -> dict[str, Any]:
     """Delete a single message."""
-    await ctx.info(f"Deleting message {message_id}")
     return await handlers.delete_message(_get_bot(ctx).bot, channel_id, message_id)
 
 
@@ -467,7 +453,6 @@ async def bulk_delete_messages(
     reason: str | None = None,
 ) -> dict[str, Any]:
     """Delete multiple messages at once (2-100 messages, must be less than 14 days old)."""
-    await ctx.info(f"Bulk deleting {len(message_ids)} messages from channel {channel_id}")
     return await handlers.bulk_delete_messages(_get_bot(ctx).bot, channel_id, message_ids, reason)
 
 
@@ -510,10 +495,16 @@ async def get_audit_log(
     ctx: Context,
     user_id: str | None = None,
     action_type: int | None = None,
+    before: str | None = None,
     limit: int = 50,
 ) -> dict[str, Any]:
-    """Retrieve server audit logs. Filter by user_id or action_type (see Discord docs for action types)."""
-    return await handlers.get_audit_log(_get_bot(ctx).bot, server_id, user_id, action_type, limit=limit)
+    """Retrieve server audit logs.
+
+    Filter by user_id (moderator) or action_type (audit log event int, e.g.
+    20 kick, 22 ban, 30 role create; full list at
+    discord.com/developers/docs/resources/audit-log). Pass the last entry's
+    id as before to page further."""
+    return await handlers.get_audit_log(_get_bot(ctx).bot, server_id, user_id, action_type, before, limit=limit)
 
 
 # ============================================================================
@@ -537,7 +528,6 @@ async def create_emoji(
     reason: str | None = None,
 ) -> dict[str, Any]:
     """Upload a custom emoji. Image must be base64 data URI (data:image/png;base64,...)."""
-    await ctx.info(f"Creating emoji '{name}' in server {server_id}")
     return await handlers.create_emoji(_get_bot(ctx).bot, server_id, name, image, roles, reason)
 
 
@@ -549,7 +539,6 @@ async def delete_emoji(
     reason: str | None = None,
 ) -> dict[str, Any]:
     """Delete a custom emoji."""
-    await ctx.info(f"Deleting emoji {emoji_id} from server {server_id}")
     return await handlers.delete_emoji(_get_bot(ctx).bot, server_id, emoji_id, reason)
 
 
@@ -569,6 +558,36 @@ async def list_threads(
     return await handlers.list_threads(
         _get_bot(ctx).bot, server_id, channel_id=channel_id, include_archived=include_archived
     )
+
+
+# ============================================================================
+# Bot Invite & Permission Tools
+# ============================================================================
+
+
+@mcp.tool()
+async def generate_invite_url(
+    ctx: Context,
+    preset: str | None = None,
+    permissions: int | None = None,
+) -> dict[str, Any]:
+    """Generate an OAuth2 bot invite URL.
+
+    preset: read_only, moderate, or full; or pass a raw permissions bitwise
+    value. Defaults to read_only."""
+    return await handlers.generate_invite_url(_get_bot(ctx).bot, preset=preset, permissions=permissions)
+
+
+@mcp.tool()
+async def list_bot_guilds(ctx: Context) -> list[dict[str, Any]]:
+    """List all guilds the bot is in with read-access status."""
+    return await resources.list_bot_guilds(_get_bot(ctx).bot)
+
+
+@mcp.tool()
+async def audit_bot_permissions(server_id: str, ctx: Context) -> dict[str, Any]:
+    """Audit bot permissions in a guild against permission presets."""
+    return await resources.audit_bot_permissions(_get_bot(ctx).bot, server_id)
 
 
 # Read tools (wrappers around resources for tool access)

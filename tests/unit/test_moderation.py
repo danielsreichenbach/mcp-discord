@@ -24,12 +24,7 @@ class TestKickMember:
         mock_member.kick = AsyncMock()
 
         # Execute
-        result = await handlers.kick_member(
-            mock_bot,
-            str(mock_guild.id),
-            str(mock_member.id),
-            "Test kick reason"
-        )
+        result = await handlers.kick_member(mock_bot, str(mock_guild.id), str(mock_member.id), "Test kick reason")
 
         # Verify
         mock_member.kick.assert_called_once_with(reason="Test kick reason")
@@ -47,11 +42,7 @@ class TestKickMember:
         mock_member.kick = AsyncMock()
 
         # Execute
-        result = await handlers.kick_member(
-            mock_bot,
-            str(mock_guild.id),
-            str(mock_member.id)
-        )
+        result = await handlers.kick_member(mock_bot, str(mock_guild.id), str(mock_member.id))
 
         # Verify
         mock_member.kick.assert_called_once_with(reason=None)
@@ -67,9 +58,7 @@ class TestKickMember:
     @pytest.mark.asyncio
     async def test_kick_member_server_not_found(self, mock_bot):
         """Test kick with server that doesn't exist."""
-        mock_bot.fetch_guild = AsyncMock(side_effect=discord.NotFound(
-            MagicMock(), "Guild not found"
-        ))
+        mock_bot.fetch_guild = AsyncMock(side_effect=discord.NotFound(MagicMock(), "Guild not found"))
 
         with pytest.raises(ValueError, match="Server.*not found"):
             await handlers.kick_member(mock_bot, "999999999999999999", "123456789012345678")
@@ -78,9 +67,7 @@ class TestKickMember:
     async def test_kick_member_invalid_user_id(self, mock_bot, mock_guild):
         """Test kick with user that doesn't exist."""
         mock_bot.fetch_guild = AsyncMock(return_value=mock_guild)
-        mock_guild.fetch_member = AsyncMock(side_effect=discord.NotFound(
-            MagicMock(), "Member not found"
-        ))
+        mock_guild.fetch_member = AsyncMock(side_effect=discord.NotFound(MagicMock(), "Member not found"))
 
         with pytest.raises(ValueError, match="Member.*not found"):
             await handlers.kick_member(mock_bot, str(mock_guild.id), "999999999999999999")
@@ -90,14 +77,10 @@ class TestKickMember:
         """Test kick when bot lacks permissions."""
         mock_bot.fetch_guild = AsyncMock(return_value=mock_guild)
         mock_guild.fetch_member = AsyncMock(return_value=mock_member)
-        mock_member.kick = AsyncMock(side_effect=discord.Forbidden(
-            MagicMock(), "Missing permissions"
-        ))
+        mock_member.kick = AsyncMock(side_effect=discord.Forbidden(MagicMock(), "Missing permissions"))
 
         with pytest.raises(PermissionError, match="Missing permissions"):
-            await handlers.kick_member(
-                mock_bot, str(mock_guild.id), str(mock_member.id)
-            )
+            await handlers.kick_member(mock_bot, str(mock_guild.id), str(mock_member.id))
 
 
 class TestBanMember:
@@ -113,19 +96,11 @@ class TestBanMember:
 
         # Execute
         result = await handlers.ban_member(
-            mock_bot,
-            str(mock_guild.id),
-            str(mock_member.id),
-            reason="Test ban reason",
-            delete_message_days=1
+            mock_bot, str(mock_guild.id), str(mock_member.id), reason="Test ban reason", delete_message_days=1
         )
 
         # Verify
-        mock_guild.ban.assert_called_once_with(
-            mock_member,
-            reason="Test ban reason",
-            delete_message_days=1
-        )
+        mock_guild.ban.assert_called_once_with(mock_member, reason="Test ban reason", delete_message_days=1)
         assert result["banned"] is True
         assert result["user_id"] == str(mock_member.id)
         assert result["user_name"] == mock_member.name
@@ -137,26 +112,15 @@ class TestBanMember:
         """Test banning a user who is not in the server by ID."""
         # Setup
         mock_bot.fetch_guild = AsyncMock(return_value=mock_guild)
-        mock_guild.fetch_member = AsyncMock(side_effect=discord.NotFound(
-            MagicMock(), "Member not found"
-        ))
+        mock_guild.fetch_member = AsyncMock(side_effect=discord.NotFound(MagicMock(), "Member not found"))
         mock_bot.fetch_user = AsyncMock(return_value=mock_user)
         mock_guild.ban = AsyncMock()
 
         # Execute
-        result = await handlers.ban_member(
-            mock_bot,
-            str(mock_guild.id),
-            str(mock_user.id),
-            reason="Ban by user ID"
-        )
+        result = await handlers.ban_member(mock_bot, str(mock_guild.id), str(mock_user.id), reason="Ban by user ID")
 
         # Verify
-        mock_guild.ban.assert_called_once_with(
-            mock_user,
-            reason="Ban by user ID",
-            delete_message_days=0
-        )
+        mock_guild.ban.assert_called_once_with(mock_user, reason="Ban by user ID", delete_message_days=0)
         assert result["banned"] is True
 
     @pytest.mark.asyncio
@@ -166,15 +130,9 @@ class TestBanMember:
         mock_guild.fetch_member = AsyncMock(return_value=mock_member)
         mock_guild.ban = AsyncMock()
 
-        result = await handlers.ban_member(
-            mock_bot, str(mock_guild.id), str(mock_member.id)
-        )
+        result = await handlers.ban_member(mock_bot, str(mock_guild.id), str(mock_member.id))
 
-        mock_guild.ban.assert_called_once_with(
-            mock_member,
-            reason=None,
-            delete_message_days=0
-        )
+        mock_guild.ban.assert_called_once_with(mock_member, reason=None, delete_message_days=0)
         assert result["messages_deleted_days"] == 0
 
     @pytest.mark.asyncio
@@ -182,14 +140,10 @@ class TestBanMember:
         """Test ban when bot lacks permissions."""
         mock_bot.fetch_guild = AsyncMock(return_value=mock_guild)
         mock_guild.fetch_member = AsyncMock(return_value=mock_member)
-        mock_guild.ban = AsyncMock(side_effect=discord.Forbidden(
-            MagicMock(), "Missing permissions"
-        ))
+        mock_guild.ban = AsyncMock(side_effect=discord.Forbidden(MagicMock(), "Missing permissions"))
 
         with pytest.raises(PermissionError, match="Missing permissions"):
-            await handlers.ban_member(
-                mock_bot, str(mock_guild.id), str(mock_member.id)
-            )
+            await handlers.ban_member(mock_bot, str(mock_guild.id), str(mock_member.id))
 
 
 class TestUnbanMember:
@@ -205,17 +159,11 @@ class TestUnbanMember:
 
         # Execute
         result = await handlers.unban_member(
-            mock_bot,
-            str(mock_guild.id),
-            str(mock_user.id),
-            reason="Test unban reason"
+            mock_bot, str(mock_guild.id), str(mock_user.id), reason="Test unban reason"
         )
 
         # Verify
-        mock_guild.unban.assert_called_once_with(
-            mock_user,
-            reason="Test unban reason"
-        )
+        mock_guild.unban.assert_called_once_with(mock_user, reason="Test unban reason")
         assert result["unbanned"] is True
         assert result["user_id"] == str(mock_user.id)
         assert result["reason"] == "Test unban reason"
@@ -225,14 +173,10 @@ class TestUnbanMember:
         """Test unban when user is not banned."""
         mock_bot.fetch_guild = AsyncMock(return_value=mock_guild)
         mock_bot.fetch_user = AsyncMock(return_value=mock_user)
-        mock_guild.unban = AsyncMock(side_effect=discord.NotFound(
-            MagicMock(), "Ban not found"
-        ))
+        mock_guild.unban = AsyncMock(side_effect=discord.NotFound(MagicMock(), "Ban not found"))
 
         with pytest.raises(ValueError, match="not banned"):
-            await handlers.unban_member(
-                mock_bot, str(mock_guild.id), str(mock_user.id)
-            )
+            await handlers.unban_member(mock_bot, str(mock_guild.id), str(mock_user.id))
 
 
 class TestListBans:
@@ -300,12 +244,7 @@ class TestEditMember:
         mock_guild.fetch_member = AsyncMock(return_value=mock_member)
         mock_member.edit = AsyncMock()
 
-        result = await handlers.edit_member(
-            mock_bot,
-            str(mock_guild.id),
-            str(mock_member.id),
-            nick="NewNickname"
-        )
+        result = await handlers.edit_member(mock_bot, str(mock_guild.id), str(mock_member.id), nick="NewNickname")
 
         mock_member.edit.assert_called_once()
         assert result["user_id"] == str(mock_member.id)
@@ -325,7 +264,7 @@ class TestEditMember:
             str(mock_guild.id),
             str(mock_member.id),
             timeout_until=timeout_until.isoformat(),
-            reason="Timeout test"
+            reason="Timeout test",
         )
 
         mock_member.edit.assert_called_once()
@@ -338,12 +277,7 @@ class TestEditMember:
         mock_guild.fetch_member = AsyncMock(return_value=mock_member)
         mock_member.edit = AsyncMock()
 
-        result = await handlers.edit_member(
-            mock_bot,
-            str(mock_guild.id),
-            str(mock_member.id),
-            timeout_until=None
-        )
+        result = await handlers.edit_member(mock_bot, str(mock_guild.id), str(mock_member.id), timeout_until=None)
 
         mock_member.edit.assert_called_once()
         assert "timeout_until" in result["changes"]
@@ -355,12 +289,7 @@ class TestEditMember:
         mock_guild.fetch_member = AsyncMock(return_value=mock_member)
         mock_member.edit = AsyncMock()
 
-        result = await handlers.edit_member(
-            mock_bot,
-            str(mock_guild.id),
-            str(mock_member.id),
-            mute=True
-        )
+        result = await handlers.edit_member(mock_bot, str(mock_guild.id), str(mock_member.id), mute=True)
 
         assert "mute" in result["changes"]
 
@@ -371,12 +300,7 @@ class TestEditMember:
         mock_guild.fetch_member = AsyncMock(return_value=mock_member)
         mock_member.edit = AsyncMock()
 
-        result = await handlers.edit_member(
-            mock_bot,
-            str(mock_guild.id),
-            str(mock_member.id),
-            deafen=True
-        )
+        result = await handlers.edit_member(mock_bot, str(mock_guild.id), str(mock_member.id), deafen=True)
 
         assert "deafen" in result["changes"]
 
@@ -392,10 +316,7 @@ class TestRemoveTimeout:
         mock_member.edit = AsyncMock()
 
         result = await handlers.remove_timeout(
-            mock_bot,
-            str(mock_guild.id),
-            str(mock_member.id),
-            reason="Timeout served"
+            mock_bot, str(mock_guild.id), str(mock_member.id), reason="Timeout served"
         )
 
         assert result["timeout_removed"] is True
