@@ -7,6 +7,7 @@ This is a fork of [hanweg/mcp-discord](https://github.com/hanweg/mcp-discord), m
 ## Available Tools
 
 ### Server Information
+
 - `list_servers` -- List available servers
 - `get_server_info` -- Get detailed server information
 - `get_channels` -- List channels in a server
@@ -15,6 +16,7 @@ This is a fork of [hanweg/mcp-discord](https://github.com/hanweg/mcp-discord), m
 - `get_user_info` -- Get detailed information about a user
 
 ### Message Management
+
 - `send_message` -- Send a message to a channel
 - `read_messages` -- Read recent message history
 - `edit_message` -- Edit a message sent by the bot
@@ -29,6 +31,7 @@ This is a fork of [hanweg/mcp-discord](https://github.com/hanweg/mcp-discord), m
 - `moderate_message` -- Delete messages and timeout users
 
 ### Channel Management
+
 - `create_text_channel` -- Create a new text channel
 - `create_voice_channel` -- Create a new voice channel
 - `create_category` -- Create a channel category
@@ -37,6 +40,7 @@ This is a fork of [hanweg/mcp-discord](https://github.com/hanweg/mcp-discord), m
 - `reorder_channels` -- Change channel positions
 
 ### Member Moderation
+
 - `kick_member` -- Kick a member from the server
 - `ban_member` -- Ban a user with optional message deletion
 - `unban_member` -- Remove a ban for a user
@@ -45,6 +49,7 @@ This is a fork of [hanweg/mcp-discord](https://github.com/hanweg/mcp-discord), m
 - `remove_timeout` -- Remove a timeout from a member
 
 ### Role Management
+
 - `add_role` -- Add a role to a user
 - `remove_role` -- Remove a role from a user
 - `create_role` -- Create a new role
@@ -53,20 +58,24 @@ This is a fork of [hanweg/mcp-discord](https://github.com/hanweg/mcp-discord), m
 - `reorder_roles` -- Change role positions
 
 ### Invite Management
+
 - `create_invite` -- Create a channel invite
 - `list_server_invites` -- List all server invites
 - `list_channel_invites` -- List channel-specific invites
 - `delete_invite` -- Revoke an invite
 
 ### Threads
+
 - `list_threads` -- List active and archived threads in a server or channel
 
 ### Bot Invite & Permissions
+
 - `generate_invite_url` -- Generate an OAuth2 bot invite URL with permission presets
 - `list_bot_guilds` -- List guilds the bot is in with read-access status
 - `audit_bot_permissions` -- Audit bot permissions against preset profiles
 
 ### Audit & Emojis
+
 - `get_audit_log` -- Retrieve server audit logs
 - `list_emojis` -- List all custom emojis
 - `create_emoji` -- Upload a new emoji
@@ -96,7 +105,7 @@ Permission names match the Discord Developer Portal (OAuth2 > URL Generator > Bo
 #### General Permissions
 
 | Permission | Tools That Require It |
-|------------|----------------------|
+| ------------ | ---------------------- |
 | **View Channels** | All read operations (`list_servers`, `get_server_info`, `get_channels`, `list_members`, `list_roles`, `get_user_info`) |
 | **View Audit Log** | `get_audit_log` |
 | **Manage Server** | `list_server_invites` |
@@ -112,7 +121,7 @@ Permission names match the Discord Developer Portal (OAuth2 > URL Generator > Bo
 #### Text Permissions
 
 | Permission | Tools That Require It |
-|------------|----------------------|
+| ------------ | ---------------------- |
 | **Send Messages** | `send_message` |
 | **Manage Messages** | `delete_message`, `bulk_delete_messages`, `moderate_message` |
 | **Pin Messages** | `pin_message`, `unpin_message` |
@@ -122,21 +131,24 @@ Permission names match the Discord Developer Portal (OAuth2 > URL Generator > Bo
 #### Voice Permissions
 
 | Permission | Tools That Require It |
-|------------|----------------------|
+| ------------ | ---------------------- |
 | **Mute Members** | `edit_member` (voice mute) |
 | **Deafen Members** | `edit_member` (voice deafen) |
 
 #### Administrator (Recommended for full functionality)
+
 For servers where the bot needs all management capabilities, enable **Administrator** which includes every permission listed above.
 
 #### Minimal Permission Setup
+
 For messaging and reactions only:
+
 - View Channels
 - Send Messages
 - Read Message History
 - Add Reactions
 
-6. Copy the generated URL, open it in your browser, and add the bot to your server.
+1. Copy the generated URL, open it in your browser, and add the bot to your server.
 
 ## Installation
 
@@ -146,11 +158,7 @@ cd mcp-discord
 uv sync
 ```
 
-On Python 3.13+, install the `audioop-lts` compatibility package:
-
-```bash
-uv pip install audioop-lts
-```
+On Python 3.13+, `uv sync` installs the `audioop-lts` compatibility package automatically (discord.py declares it as a conditional dependency).
 
 ## Usage
 
@@ -159,6 +167,7 @@ uv pip install audioop-lts
 ```bash
 DISCORD_TOKEN=<your_bot_token> uv run mcp-discord
 ```
+
 ### MCP clients (mcp.json)
 
 Most MCP hosts — [pi](https://github.com/nicobailon/pi-mcp-adapter), Claude Code, Cursor, and others — read the standard `mcp.json` format. The entry runs the server with `uv`:
@@ -190,7 +199,7 @@ Where to put it:
 
 [pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter) reads both files above automatically. Options worth setting for this server:
 
-- `directTools` — the server exposes 48+ tools, so the default single `mcp` proxy tool is the lean choice. Expose a subset directly with `"directTools": ["send_message", "read_messages"]`.
+- `directTools` — the server exposes 48 tools, so the default single `mcp` proxy tool is the lean choice. Expose a subset directly with `"directTools": ["send_message", "read_messages"]`.
 - `approveTools` — require confirmation for destructive actions: `"approveTools": ["kick_*", "ban_*", "delete_*", "bulk_delete_*", "moderate_*"]`.
 - `protocolVersion` — defaults to `"legacy"`, which this server supports alongside the 2026-07-28 revision; no change needed.
 - `lifecycle` — defaults to `"lazy"`; the server process and Discord connection start on the first tool call.

@@ -51,17 +51,18 @@ Ruff (linter/formatter) and pyright (type checker) are configured in `pyproject.
 
 The server is split into four modules under `src/discord_mcp/`:
 
-- `__init__.py` -- Package entry point. Defines `main()` which calls `asyncio.run(server.main())`. Suppresses PyNaCl warning (voice features unused).
+- `__init__.py` -- Package entry point. Defines `main()` which calls `server.main()`. Suppresses PyNaCl warning (voice features unused).
 - `client.py` -- Discord client setup. Creates the `commands.Bot` instance with required intents, reads `DISCORD_TOKEN` from environment.
-- `server.py` -- FastMCP server with tool and resource registrations. Each tool is a function decorated with `@mcp.tool()` that validates inputs, calls a handler, and returns the result dict. FastMCP handles serialization.
+- `server.py` -- MCPServer (MCP SDK v2) with tool and resource registrations. Each tool is a function decorated with `@mcp.tool()` that calls a handler and returns the result. The server handles serialization.
 - `handlers.py` -- Business logic. Pure async functions that take a `commands.Bot` and parameters, call `discord.py` APIs, and return dicts. No MCP dependency.
 - `resources.py` -- Read-only MCP resources (server info, channels, members, messages, roles, user info).
 
 ### Runtime Flow
 
 1. `client.py` creates the `commands.Bot` with message_content, members, and guilds intents
-2. `server.py` creates a `FastMCP` instance, registers tools and resources
-3. `main()` starts the Discord bot as a background task, then runs the MCP stdio transport
+2. `client.py` defines the `discord_lifespan` context manager that starts the bot and yields a `DiscordContext`
+3. `server.py` creates an `MCPServer` with that lifespan and registers tools and resources
+4. `main()` runs `mcp.run()` (stdio transport); the bot lifecycle is handled by the lifespan
 
 ### Adding a New Tool
 
@@ -80,11 +81,15 @@ tests/
 │   └── test_mcp_tools.py
 └── unit/              # Mocked tests for all handlers
     ├── conftest.py    # Shared fixtures (mock_bot, mock_guild, mock_member, etc.)
+    ├── test_bot_invite.py
     ├── test_channels.py
-    ├── test_guild.py  # Audit log, emojis
+    ├── test_client.py
+    ├── test_guild.py   # Audit log, emojis
+    ├── test_handlers_core.py
     ├── test_invites.py
     ├── test_messages.py
     ├── test_moderation.py
+    ├── test_resources.py
     └── test_roles.py
 ```
 
@@ -140,9 +145,9 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/
 ## Key Dependencies
 
 - `discord.py` (>=2.3.0) -- Discord API wrapper
-- `mcp[cli]` (>=1.26.0) -- Model Context Protocol SDK (provides `FastMCP`, stdio transport, CLI tools)
+- `mcp[cli]` (>=2,<3) -- Model Context Protocol SDK (provides `MCPServer`, stdio transport, CLI tools)
 
 ## References
 
-- MCP Python SDK (authoritative for MCP patterns): https://github.com/modelcontextprotocol/python-sdk
-- Discord API: https://docs.discord.com/developers/reference
+- MCP Python SDK (authoritative for MCP patterns): <https://github.com/modelcontextprotocol/python-sdk>
+- Discord API: <https://docs.discord.com/developers/reference>
