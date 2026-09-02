@@ -7,6 +7,8 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-02
+
 ### Fixed
 
 - Tool domain errors (invalid IDs, out-of-range values) now surface their message to the caller instead of the generic "Error executing tool" text. MCP SDK v2 treats a raised `ValueError` as a crash and strips its message; tool registration now converts `ValueError` to `ToolError` so the text reaches the model.
