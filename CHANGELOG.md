@@ -7,10 +7,13 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+### Fixed
+
+- Tool domain errors (invalid IDs, out-of-range values) now surface their message to the caller instead of the generic "Error executing tool" text. MCP SDK v2 treats a raised `ValueError` as a crash and strips its message; tool registration now converts `ValueError` to `ToolError` so the text reaches the model.
+
 ## [0.2.0] - 2026-09-02
 
 ### Added
-
 - 27 server management tools: member moderation (`kick_member`, `ban_member`, `unban_member`, `list_bans`, `edit_member`, `remove_timeout`), role management (`create_role`, `edit_role`, `delete_role`, `reorder_roles`), channel management (`create_voice_channel`, `create_category`, `reorder_channels`), invites (`create_invite`, `list_server_invites`, `list_channel_invites`, `delete_invite`), audit log (`get_audit_log`), emojis (`list_emojis`, `create_emoji`, `delete_emoji`), and pin/delete reactions.
 - Bot invite and permission tools: `generate_invite_url`, `list_bot_guilds`, `audit_bot_permissions`
 - `list_roles` tool and `list_threads` tool
