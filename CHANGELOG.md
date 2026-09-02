@@ -7,59 +7,47 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-02
+
 ### Added
 
-- `list_roles` tool to list all roles in a server with position, color, and mentionable status
-- `_ServerState` class to hold runtime state (bot, MCP server, ready event)
-- `_register_handlers` function to register MCP tool handlers on a server instance
-- `_parse_id`, `_require_text_channel`, `_require_guild_channel`, `_fetch_role` helper functions
-- Startup timeout: bot must connect within 30 seconds or the server exits with an error
-- Ruff linter/formatter and pyright type checker as dev dependencies
-- Ruff and pyright configuration in `pyproject.toml`
-- Type annotations across `server.py` and `__init__.py`
-- Conventional Commits guidelines in `AGENTS.md`
-- `.mise.toml` for Python and uv tool versions
-- Daniel S. Reichenbach as project author
-- `client.py` module with Discord bot setup, utilities, and lifespan context manager
-- `handlers.py` module with pure async functions for tool actions
-- `resources.py` module with pure async functions for read-only data
-- Integration test infrastructure using pytest
+- 27 server management tools: member moderation (`kick_member`, `ban_member`, `unban_member`, `list_bans`, `edit_member`, `remove_timeout`), role management (`create_role`, `edit_role`, `delete_role`, `reorder_roles`), channel management (`create_voice_channel`, `create_category`, `reorder_channels`), invites (`create_invite`, `list_server_invites`, `list_channel_invites`, `delete_invite`), audit log (`get_audit_log`), emojis (`list_emojis`, `create_emoji`, `delete_emoji`), and pin/delete reactions.
+- Bot invite and permission tools: `generate_invite_url`, `list_bot_guilds`, `audit_bot_permissions`
+- `list_roles` tool and `list_threads` tool
+- `read_messages` pagination (`limit`, `before`, `after`, `oldest_first`) plus attachment and embed metadata
+- `client.py`, `handlers.py`, `resources.py` modules (4-module split with pure async handlers that take a `commands.Bot`)
+- Unit, MCP protocol-level, and live integration test suites (mocked `discord.py` objects)
+- Ruff linter/formatter and pyright type checker as dev dependencies, configured in `pyproject.toml`
+- Type annotations across the source
+- Conventional Commits and communication guidelines in `AGENTS.md`
+- `DISCORD_TOKEN` read from the environment; startup requires it
 
 ### Changed
 
-- Minimum Python version lowered from 3.14 to 3.12
-- `read_messages` output now includes message IDs (e.g. `[123456] author: content`)
+- Migrated from MCP SDK v1 (`FastMCP`) to MCP SDK v2 (`MCPServer` with a lifespan that manages the Discord bot connection)
+- Split the server into `client.py`, `handlers.py`, `resources.py`, `server.py` modules
+- Moved to `discord.py>=2.3.0` with `message_content` and `members` intents enabled
+- `read_messages` output now includes message IDs, authors, content, and attachment/embed fields
 - `get_server_info` uses `fetch_guild(with_counts=True)` for accurate member counts
-- Server module import deferred to `main()` in `__init__.py`
-- `server.py` restructured: global state replaced with `_ServerState`, handlers extracted to `_register_handlers`
-- Startup sequence waits for Discord bot readiness before accepting MCP requests
-- `get_channels` tool now raises on errors instead of silently returning error text
-- Emoji debug logging changed from `error` to `debug` level
-- Import of `timedelta` directly instead of through `datetime` class
-- README rewritten with step-by-step Discord bot setup, required permissions, and `claude mcp add` usage
-- Codebase formatted with ruff (trailing commas, double quotes, line wrapping)
-- Refactored to FastMCP with 4-module split (client.py, handlers.py, resources.py, server.py)
-- Discord INFO logging suppressed; only discord-mcp logs at INFO level
-- Bot shutdown now has timeouts to prevent hanging on CTRL-C
+- Tool functions return structured data (`dict`/`list`) instead of text
+- `get_channels` now raises on errors instead of returning an error string
+- Bot shutdown has timeouts to prevent hanging on Ctrl-C
+- Moved the server import into `main()` in `__init__.py` and dropped the `asyncio.run` wrapper
 
 ### Fixed
 
 - `get_server_info` returned `member_count: None` for servers with fewer than 500 members
 - `read_messages` did not expose message IDs, making reaction and moderation tools unusable
-- `message.delete()` was called with unsupported `reason` keyword argument
-- `discord_client.user` access without None guard in `remove_reaction`
-- `bot.user.name` access without None guard in `on_ready`
-- Unused `fetch_users` variable in `read_messages`
-- f-string without placeholders in `get_user_info` response
-- `__init__.py` wrapped sync `server.main()` in `asyncio.run()`, causing type error
+- `message.delete()` was called with an unsupported `reason` keyword argument
+- `remove_reaction` and `on_ready` accessed `.user`/`.name` without a None guard
+- f-string without placeholders in the `get_user_info` response
 
 ### Removed
 
-- Hardcoded `DISCORD_TOKEN` environment variable from Dockerfile
-- `tracemalloc` import and startup call (unused overhead)
-- Redundant `except Exception` re-raise in `__init__.py`
-- `server` from `__all__` in `__init__.py`
-- Smithery deployment configuration (`smithery.yaml` and README section)
+- Real-time monitoring implementation plan (`TODO-MONITORING.md`)
+- Hardcoded `DISCORD_TOKEN` from the Dockerfile
+- Smithery deployment configuration
+- `tracemalloc` import and startup call
 
 ## [0.1.0] - 2026-02-17
 
