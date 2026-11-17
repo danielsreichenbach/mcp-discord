@@ -93,31 +93,29 @@ class TestGetChannels:
     @pytest.mark.asyncio
     async def test_returns_channels(self):
         client = MagicMock(spec=commands.Bot)
-        guild = MagicMock()
-        ch1 = MagicMock()
-        ch1.id = 100
-        ch1.name = "general"
-        ch1.type = discord.ChannelType.text
-        ch2 = MagicMock()
-        ch2.id = 200
-        ch2.name = "voice"
-        ch2.type = discord.ChannelType.voice
-        guild.fetch_channels = AsyncMock(return_value=[ch1, ch2])
-        client.fetch_guild = AsyncMock(return_value=guild)
+        client.http = MagicMock()
+        client.http.get_all_guild_channels = AsyncMock(
+            return_value=[
+                {"id": 100, "name": "general", "type": 0},
+                {"id": 200, "name": "voice", "type": 2},
+            ]
+        )
 
         result = await resources.get_channels(client, "999")
 
         assert len(result) == 2
         assert result[0]["id"] == "100"
         assert result[0]["name"] == "general"
+        assert result[0]["type"] == "text"
+        assert result[1]["id"] == "200"
         assert result[1]["name"] == "voice"
+        assert result[1]["type"] == "voice"
 
     @pytest.mark.asyncio
     async def test_empty_channels(self):
         client = MagicMock(spec=commands.Bot)
-        guild = MagicMock()
-        guild.fetch_channels = AsyncMock(return_value=[])
-        client.fetch_guild = AsyncMock(return_value=guild)
+        client.http = MagicMock()
+        client.http.get_all_guild_channels = AsyncMock(return_value=[])
 
         result = await resources.get_channels(client, "999")
         assert result == []

@@ -280,12 +280,16 @@ class TestListThreads:
         ch2.name = "modding"
         ch2.threads = [self._make_thread(1002, "mod-thread")]
 
-        # Include a non-text channel that should be skipped
-        voice = MagicMock(spec=discord.VoiceChannel)
-        voice.id = 300
-        voice.name = "voice"
-
-        mock_guild.fetch_channels = AsyncMock(return_value=[ch1, ch2, voice])
+        # Raw channel list: two text channels and one voice channel (skipped)
+        mock_bot.http = MagicMock()
+        mock_bot.http.get_all_guild_channels = AsyncMock(
+            return_value=[
+                {"id": 100, "name": "general", "type": 0},
+                {"id": 200, "name": "modding", "type": 0},
+                {"id": 300, "name": "voice", "type": 2},
+            ]
+        )
+        mock_bot.fetch_channel = AsyncMock(side_effect=[ch1, ch2])
 
         result = await handlers.list_threads(mock_bot, str(mock_guild.id))
 
@@ -324,7 +328,10 @@ class TestListThreads:
     async def test_list_threads_forbidden(self, mock_bot, mock_guild):
         """Test that missing permissions raises PermissionError."""
         mock_bot.fetch_guild = AsyncMock(return_value=mock_guild)
-        mock_guild.fetch_channels = AsyncMock(side_effect=discord.Forbidden(MagicMock(), "Missing permissions"))
+        mock_bot.http = MagicMock()
+        mock_bot.http.get_all_guild_channels = AsyncMock(
+            side_effect=discord.Forbidden(MagicMock(), "Missing permissions")
+        )
 
         with pytest.raises(PermissionError, match="Missing permissions"):
             await handlers.list_threads(mock_bot, str(mock_guild.id))

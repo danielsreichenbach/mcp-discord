@@ -240,11 +240,34 @@ class TestAuditBotPermissions:
     @pytest.mark.asyncio
     async def test_missing_bot_member_raises(self):
         client = MagicMock(spec=commands.Bot)
+        client.user = None
         guild = MagicMock(spec=discord.Guild)
         guild.id = 444
         guild.me = None
 
         client.fetch_guild = AsyncMock(return_value=guild)
 
-        with pytest.raises(ValueError, match="Bot member not found"):
+        with pytest.raises(ValueError, match="Bot user not available"):
             await resources.audit_bot_permissions(client, "444")
+
+    @pytest.mark.asyncio
+    async def test_missing_bot_member_fetches_member(self):
+        """A REST-fetched guild (guild.me is None) fetches the bot member."""
+        client = MagicMock(spec=commands.Bot)
+        client.user = MagicMock()
+        client.user.id = 123456789012345678
+        guild = MagicMock(spec=discord.Guild)
+        guild.id = 444
+        guild.me = None
+
+        me = MagicMock(spec=discord.Member)
+        me.guild_permissions = discord.Permissions(66560)  # read_only
+        guild.fetch_member = AsyncMock(return_value=me)
+
+        client.fetch_guild = AsyncMock(return_value=guild)
+
+        result = await resources.audit_bot_permissions(client, "444")
+
+        guild.fetch_member.assert_called_once_with(client.user.id)
+        assert result["is_admin"] is False
+        assert result["presets"]["read_only"]["satisfied"] is True

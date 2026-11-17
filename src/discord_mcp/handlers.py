@@ -15,7 +15,7 @@ from typing import Any, NotRequired, TypedDict
 import discord
 from discord.ext import commands
 
-from .client import fetch_role, parse_id, require_guild_channel, require_text_channel
+from .client import fetch_guild_channels_raw, fetch_role, parse_id, require_guild_channel, require_text_channel
 
 _SENTINEL = object()
 """Sentinel value used to distinguish 'not provided' from None."""
@@ -1856,9 +1856,16 @@ async def list_threads(
                 raise ValueError(f"Channel {channel_id} is not a text channel")
             channels_to_scan.append(ch)
         else:
-            fetched = await guild.fetch_channels()
-            channels_to_scan = [c for c in fetched if isinstance(c, discord.TextChannel)]
-
+            # Use the raw channel list to avoid InvalidData on unknown
+            # channel types (e.g. type 20 'server-hub'), then fetch each
+            # text channel individually.
+            raw_channels = await fetch_guild_channels_raw(client, guild.id)
+            for c in raw_channels:
+                if c["type"] != "text":
+                    continue
+                ch = await client.fetch_channel(int(c["id"]))
+                if isinstance(ch, discord.TextChannel):
+                    channels_to_scan.append(ch)
         threads: list[dict[str, Any]] = []
 
         for ch in channels_to_scan:

@@ -16,6 +16,9 @@ def mock_bot() -> MagicMock:
     bot.user.id = 123456789012345678
     bot.user.name = "TestBot"
     bot.is_closed = MagicMock(return_value=False)
+    # Low-level HTTP client (used by fetch_guild_channels_raw)
+    bot.http = MagicMock()
+    bot.http.get_all_guild_channels = AsyncMock(return_value=[])
     return bot
 
 

@@ -5,6 +5,7 @@ import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from typing import Any
 
 import discord
 from discord.ext import commands
@@ -60,6 +61,47 @@ def require_guild_channel(channel: object, channel_id: str) -> discord.abc.Guild
     if not isinstance(channel, discord.abc.GuildChannel):
         raise ValueError(f"Channel {channel_id} is not a guild channel")
     return channel
+
+
+# Mapping of Discord API channel type int -> friendly name. Covers all
+# documented types; unknown types are labeled 'unknown_<type>' by the caller.
+CHANNEL_TYPE_NAMES: dict[int, str] = {
+    0: "text",
+    1: "private",
+    2: "voice",
+    3: "group",
+    4: "category",
+    5: "news",
+    10: "news_thread",
+    11: "public_thread",
+    12: "private_thread",
+    13: "stage_voice",
+    14: "directory",
+    15: "forum",
+    16: "media",
+}
+
+
+async def fetch_guild_channels_raw(client: commands.Bot, guild_id: int) -> list[dict[str, Any]]:
+    """Fetch all guild channels via the raw HTTP API.
+
+    Bypasses discord.py's channel factory (Guild.fetch_channels), which raises
+    InvalidData on channel types it does not recognize (e.g. type 20
+    'server-hub'). Returns a list of dicts with id, name, and a friendly type
+    name. Unknown types are labeled 'unknown_<type>'.
+    """
+    data = await client.http.get_all_guild_channels(guild_id)
+    channels: list[dict[str, Any]] = []
+    for d in data:
+        t = d.get("type", 0)
+        channels.append(
+            {
+                "id": str(d["id"]),
+                "name": d.get("name"),
+                "type": CHANNEL_TYPE_NAMES.get(t, f"unknown_{t}"),
+            }
+        )
+    return channels
 
 
 async def fetch_role(guild: discord.Guild, role_id: int) -> discord.Role:

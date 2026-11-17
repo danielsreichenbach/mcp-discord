@@ -223,7 +223,6 @@ class TestToolExecution:
     @pytest.mark.asyncio
     async def test_list_threads(self, mcp_session):
         session, mock_bot = mcp_session
-        guild = mock_bot.fetch_guild.return_value
 
         ch = MagicMock(spec=discord.TextChannel)
         ch.id = 555555555555555555
@@ -239,7 +238,11 @@ class TestToolExecution:
         thread.created_at.isoformat = MagicMock(return_value="2024-01-01T00:00:00+00:00")
         ch.threads = [thread]
 
-        guild.fetch_channels = AsyncMock(return_value=[ch])
+        mock_bot.http = MagicMock()
+        mock_bot.http.get_all_guild_channels = AsyncMock(
+            return_value=[{"id": 555555555555555555, "name": "general", "type": 0}]
+        )
+        mock_bot.fetch_channel = AsyncMock(return_value=ch)
 
         result = await session.call_tool(
             "list_threads",

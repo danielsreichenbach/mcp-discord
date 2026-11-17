@@ -10,7 +10,7 @@ from typing import Any
 import discord
 from discord.ext import commands
 
-from .client import parse_id, require_messageable_channel
+from .client import fetch_guild_channels_raw, parse_id, require_messageable_channel
 from .handlers import PERMISSION_PRESETS, _describe_permissions
 
 
@@ -46,16 +46,8 @@ async def get_server_info(client: commands.Bot, server_id: str) -> dict[str, Any
 
 async def get_channels(client: commands.Bot, server_id: str) -> list[dict[str, Any]]:
     """Get a list of all channels in a Discord server."""
-    guild = await client.fetch_guild(parse_id(server_id, "server_id"))
-    channels = await guild.fetch_channels()
-    return [
-        {
-            "id": str(ch.id),
-            "name": ch.name,
-            "type": str(ch.type),
-        }
-        for ch in channels
-    ]
+    guild_id = parse_id(server_id, "server_id")
+    return await fetch_guild_channels_raw(client, guild_id)
 
 
 async def list_members(client: commands.Bot, server_id: str, limit: int = 100) -> list[dict[str, Any]]:
@@ -211,7 +203,10 @@ async def audit_bot_permissions(client: commands.Bot, server_id: str) -> dict[st
     guild = await client.fetch_guild(parse_id(server_id, "server_id"))
     me = guild.me
     if me is None:
-        raise ValueError(f"Bot member not found in guild {server_id}")
+        # REST-fetched guilds do not populate guild.me; fetch the bot member.
+        if client.user is None:
+            raise ValueError("Bot user not available")
+        me = await guild.fetch_member(client.user.id)
     perms = me.guild_permissions
     is_admin = perms.administrator
 
