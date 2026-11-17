@@ -31,13 +31,19 @@ def _get_bot(ctx: Context) -> DiscordContext:
 
 
 def _tool(fn):
-    """Register a tool, surfacing domain ValueError messages as deliberate errors."""
+    """Register a tool, surfacing domain error messages as deliberate errors.
+
+    Handlers raise ValueError (invalid input / not found), PermissionError
+    (missing permissions), and RuntimeError (Discord API errors). Converting
+    all three to ToolError lets MCP clients see the descriptive message
+    instead of a generic "Error executing tool".
+    """
 
     @functools.wraps(fn)
     async def _guarded(*args: Any, **kwargs: Any) -> Any:
         try:
             return await fn(*args, **kwargs)
-        except ValueError as exc:
+        except (ValueError, PermissionError, RuntimeError) as exc:
             raise ToolError(str(exc)) from exc
 
     return mcp.tool()(_guarded)
